@@ -183,8 +183,9 @@ const NAV=[
   {id:"people",label:"ครูและผู้ดูแล",short:"บุคลากร",icon:"users",admin:true},
   {id:"courses",label:"รายวิชาของโรงเรียน",short:"รายวิชา",icon:"grid",admin:true},
   {id:"settings",label:"ตั้งค่าโรงเรียน",short:"ตั้งค่า",icon:"gear",admin:true},
+  {id:"help",label:"คู่มือการใช้งาน",short:"คู่มือ",icon:"info"},
   {id:"account",label:"บัญชีของฉัน",short:"บัญชี",icon:"user"}];
-const TITLES={courses:"รายวิชาของโรงเรียน",sign:"ลงนามบันทึก",home:"หน้าหลัก",logs:"บันทึกหลังสอน",track:"ติดตามการส่ง",write:"เขียนบันทึก",binder:"รวมเล่ม",subjects:"วิชาที่สอน",people:"ครูและผู้ดูแล",settings:"ตั้งค่าโรงเรียน",account:"บัญชีของฉัน",doc:"บันทึกหลังสอน"};
+const TITLES={help:"คู่มือการใช้งาน",courses:"รายวิชาของโรงเรียน",sign:"ลงนามบันทึก",home:"หน้าหลัก",logs:"บันทึกหลังสอน",track:"ติดตามการส่ง",write:"เขียนบันทึก",binder:"รวมเล่ม",subjects:"วิชาที่สอน",people:"ครูและผู้ดูแล",settings:"ตั้งค่าโรงเรียน",account:"บัญชีของฉัน",doc:"บันทึกหลังสอน"};
 const navItems=()=>NAV.filter(n=>!n.admin||isAdmin());
 const activeTab=()=>S.view==="doc"?S.back:S.view;
 function pendingCount(){if(!isAdmin())return 0;return D.logs.filter(l=>l.term===S.term&&!reviewed(l.id)).length}
@@ -218,6 +219,7 @@ function renderTermSel(){
 }
 function go(v){
   if(v!=="people")S.pwNote="";
+  if(v==="help"&&S.view!=="help"&&!go.help)S.helpSec="";go.help=false;
   if(v==="_more"){$("more").hidden=false;return}
   $("more").hidden=true;
   if(v==="write"&&!go.keep){S.editId=null;S.w={assign:null,cls:null}}go.keep=false;
@@ -240,10 +242,11 @@ function render(){
   if(S.screen!=="app"){renderGate();return}
   renderNav();renderTermSel();
   $("pageTitle").textContent=TITLES[S.view];
+  {const hbn=$("helpBtn");if(hbn){const k=VIEW_HELP[S.view];hbn.hidden=S.view==="help"||!k;hbn.onclick=()=>{S.helpSec=k;go.help=true;go("help")}}}
   $("pageSub").textContent=D.settings.school+" · "+(isCur()?"ภาคเรียนปัจจุบัน":"ภาคเรียนที่ผ่านมา (ดูอย่างเดียว)");
   const m=$("main");
   if(S.screen==="boot")return;
-  ({courses:vCourses,sign:vSign,home:vHome,logs:vLogs,track:vTrack,write:vWrite,binder:vBinder,subjects:vSubjects,people:vPeople,settings:vSettings,account:vAccount,doc:vDoc})[S.view](m);
+  ({courses:vCourses,sign:vSign,home:vHome,logs:vLogs,track:vTrack,write:vWrite,binder:vBinder,subjects:vSubjects,people:vPeople,settings:vSettings,account:vAccount,doc:vDoc,help:vHelp})[S.view](m);
   fitSheets();
 }
 const oldBanner=()=>isCur()?"":`<div class="banner">${ic("info")}<div>กำลังดู<b>ภาคเรียนที่ ${esc(S.term)}</b> ซึ่งเป็นภาคเรียนที่ผ่านมา เปิดดูและดาวน์โหลดได้ตลอด แต่แก้ไขไม่ได้ ภาคเรียนปัจจุบันคือ ${esc(curTerm())}</div></div>`;
@@ -659,11 +662,157 @@ function courseMany(g,lv,sems){
     $("qGo").disabled=true;$("qGo").textContent="กำลังเพิ่ม…";if(await courseAddMany(list))closeModal(true);else{$("qGo").disabled=false;$("qGo").innerHTML=ic("plus")+"เพิ่มรายวิชาทั้งหมด"}};
 }
 
+// ---------- คู่มือการใช้งาน (แสดงตามสิทธิ์ · ดาวน์โหลดเป็น PDF ได้)
+// role: "all" = ทุกคน, "admin" = ผู้บริหาร/แอดมินโรงเรียน · ข้อความ **ตัวหนา** ใช้ได้
+const HELP=[
+ {id:"start",role:"all",icon:"login",go:"home",title:"เริ่มต้นใช้งาน",desc:"การเข้าสู่ระบบครั้งแรก และสิ่งที่ควรทำก่อน",
+  steps:["เปิดลิงก์ของระบบที่โรงเรียนแจ้ง ด้วย **Chrome** หรือ **Safari** (ถ้าเปิดจาก LINE ระบบจะพาไปเปิดในเบราว์เซอร์ปกติให้)",
+   "กรอก **ชื่อผู้ใช้** และ **รหัสผ่าน** ที่ได้รับจากโรงเรียน แล้วกด **เข้าสู่ระบบ**",
+   "เข้าครั้งแรก ให้ไปที่ **บัญชีของฉัน** เพื่อเปลี่ยนรหัสผ่าน ตรวจชื่อ-ตำแหน่ง และทำลายเซ็น (ดูหัวข้อ \"บัญชีของฉัน\")",
+   "กำหนด **วิชาที่สอน** ของภาคเรียนนี้ แล้วเริ่ม **เขียนบันทึก** ได้เลย",
+   "ภาคเรียนปัจจุบันแสดงที่มุมขวาบน ระบบเปลี่ยนภาคเรียนและปีการศึกษาให้เองตามวันเปิดภาคเรียน"],
+  tips:["บนโทรศัพท์ เพิ่มระบบเป็นไอคอนบนหน้าจอได้ Chrome: กด ⋮ → เพิ่มลงในหน้าจอหลัก · Safari: กดปุ่มแชร์ → เพิ่มไปยังหน้าจอโฮม",
+   "บนคอมพิวเตอร์ เมนูอยู่ด้านซ้าย บนโทรศัพท์ เมนูอยู่แถบล่าง เมนูที่เหลืออยู่ในปุ่ม \"เมนู\""]},
+ {id:"account",role:"all",icon:"user",go:"account",title:"บัญชีของฉัน: รหัสผ่านและลายเซ็น",desc:"แก้ชื่อ ตำแหน่ง เปลี่ยนรหัสผ่าน ทำลายเซ็น",
+  steps:["เปิด **บัญชีของฉัน** บนคอมพิวเตอร์กดที่ชื่อของตนเองมุมซ้ายล่าง บนโทรศัพท์กด **เมนู → บัญชีของฉัน**",
+   "ตรวจ **ชื่อ-นามสกุล** และ **ตำแหน่ง** ซึ่งใช้ลงชื่อท้ายเอกสาร แล้วกด **บันทึกข้อมูล**",
+   "**ลายเซ็น** วาดด้วยนิ้วหรือเมาส์ในกรอบ หรือกด **แนบรูปลายเซ็น** (ถ่ายลายเซ็นบนกระดาษขาว ระบบตัดพื้นขาวออกให้) แล้วกด **บันทึกลายเซ็น**",
+   "**เปลี่ยนรหัสผ่าน** กรอกรหัสเดิม รหัสใหม่อย่างน้อย 6 ตัว และยืนยันรหัสใหม่ แล้วกด **เปลี่ยนรหัสผ่าน**"],
+  tips:["ลืมรหัสผ่าน ให้ติดต่อแอดมินโรงเรียนเพื่อรีเซ็ต แล้วเปลี่ยนเป็นรหัสของตนเองทันที","ลายเซ็นจะไปอยู่ในช่องลงชื่อของทุกบันทึกโดยอัตโนมัติ"]},
+ {id:"subjects",role:"all",icon:"layers",go:"subjects",title:"กำหนดวิชาที่สอน",desc:"เลือกวิชาและห้องที่สอนในแต่ละภาคเรียน",
+  steps:["ไปที่เมนู **วิชาที่สอน**",
+   "เลือก **ชั้นที่สอน** แล้วกดเลือกรายวิชา (เลือกได้หลายวิชาพร้อมกัน)",
+   "เลือก **ห้องที่สอน** หรือพิมพ์ชื่อห้องเอง คั่นด้วยจุลภาค เช่น ม.1/1, ม.1/2",
+   "กด **เพิ่มวิชาที่เลือก** ทำซ้ำได้ถ้าสอนหลายชั้น",
+   "วิชาที่ไม่มีในรายการ หรือระดับปฐมวัย กด **วิชาที่ไม่มีในรายการ / ระดับปฐมวัย** แล้วกรอกชื่อวิชาเอง"],
+  tips:["ขึ้นภาคเรียนใหม่ กดปุ่ม **คัดลอกจากภาคเรียน ...** เพื่อใช้วิชาเดิม แล้วลบวิชาที่ไม่ได้สอน","ลบวิชาได้เฉพาะวิชาที่ยังไม่มีบันทึก · ระบบเก็บประวัติการสอนไว้ทุกภาคเรียน"]},
+ {id:"write",role:"all",icon:"plus",go:"write",title:"เขียนบันทึกหลังสอน",desc:"กรอกบันทึกตามแบบฟอร์มของโรงเรียน",
+  steps:["กดปุ่ม **เขียนบันทึก** (ปุ่มสีทองในเมนู หรือปุ่มกลมตรงกลางแถบล่างบนโทรศัพท์)",
+   "เลือก **วิชา** แล้วเลือก **ชั้น/ห้อง** **วันที่สอน** และ **คาบที่**",
+   "กรอก **หน่วยที่ ชื่อหน่วย แผนที่ และเรื่อง** ระบบเติมหน่วยล่าสุดและเลขแผนถัดไปให้ พิมพ์เลขหน่วยเดิมแล้วชื่อหน่วยจะขึ้นเอง",
+   "กรอก **จำนวนนักเรียนทั้งหมด** และ **จำนวนที่ผ่าน** ระบบคำนวณร้อยละผ่าน/ไม่ผ่านให้",
+   "เขียนผลด้าน **K P A** (ระดับปฐมวัยเป็นพัฒนาการ 4 ด้าน)",
+   "ติ๊ก **ปัญหาและอุปสรรค** และ **ข้อเสนอแนะ** (พิมพ์ในช่องแล้วระบบติ๊กให้)",
+   "ตรวจชื่อผู้บันทึก แล้วกด **บันทึก** เมื่อขึ้นข้อความ \"บันทึกขึ้นระบบแล้ว\" แปลว่าผู้บริหารเห็นแล้ว ไม่ต้องส่งเพิ่ม"],
+  tips:["ช่องที่ต้องกรอก: วันที่สอน หน่วยที่ แผนที่ เรื่อง จำนวนนักเรียน จำนวนที่ผ่าน และชื่อผู้บันทึก",
+   "อินเทอร์เน็ตไม่ดี บันทึกจะเก็บไว้ในเครื่องก่อน และส่งขึ้นระบบเองเมื่อกลับมาออนไลน์",
+   "เขียนยาวเกิน 1 หน้าได้ ระบบขึ้นหน้าใหม่ให้เอง"]},
+ {id:"logs",role:"all",icon:"logs",go:"logs",title:"ดู แก้ไข และลบบันทึก",desc:"ค้นหาบันทึก ดูสถานะการลงนาม",
+  steps:["ไปที่เมนู **บันทึกหลังสอน** กรองตามวิชา หน่วย ห้อง สถานะ หรือพิมพ์ค้นหาได้",
+   "กดที่รายการเพื่อเปิดเอกสาร มุมบนจะบอกสถานะ **รอลงนาม** หรือ **ลงนามแล้ว**",
+   "กด **แก้ไข** เพื่อแก้ข้อมูล หรือกดไอคอนถังขยะเพื่อลบ (ลบแล้วกู้คืนไม่ได้)",
+   "ดูบันทึกภาคเรียนเก่า: เลือกภาคเรียนที่ช่อง **ภาคเรียน** มุมขวาบน"],
+  tips:["แก้ไขและลบได้เฉพาะบันทึกของตนเองในภาคเรียนปัจจุบัน ภาคเรียนที่ผ่านมาเปิดดูและดาวน์โหลดได้ แต่แก้ไขไม่ได้"]},
+ {id:"pdf",role:"all",icon:"pdf",go:"logs",title:"ดูตัวอย่างและดาวน์โหลด PDF",desc:"พิมพ์เอกสารตามแบบฟอร์มของโรงเรียน",
+  steps:["เปิดบันทึกที่ต้องการ แล้วกด **ดูตัวอย่าง / PDF**",
+   "ตรวจหน้าตาเอกสารขนาด A4 ในหน้าตัวอย่าง",
+   "กด **ดาวน์โหลด PDF** ไฟล์จะอยู่ในโฟลเดอร์ดาวน์โหลดของเครื่อง",
+   "ต้องการหลายฉบับในไฟล์เดียว: ที่เมนู **บันทึกหลังสอน** กรองรายการ แล้วกด **PDF รายการนี้** (กด **CSV** เพื่อได้ตาราง Excel)"],
+  tips:["บนโทรศัพท์ ไฟล์อยู่ในแอป \"ไฟล์\" หรือ \"ดาวน์โหลด\"","บันทึกที่ยาวเกิน 1 หน้าจะขึ้นหน้าต่อพร้อมเลขหน้าให้เอง"]},
+ {id:"binder",role:"all",icon:"book",go:"binder",title:"รวมเล่มบันทึก",desc:"รวมบันทึกทั้งวิชาเป็นเล่ม มีปกและสารบัญ",
+  steps:["ไปที่เมนู **รวมเล่ม** แล้วเลือก **วิชา**",
+   "ระบบแสดงบันทึกแยกตามหน่วย เรียงตามวันที่สอน",
+   "กด **PDF หน่วยนี้** เพื่อพิมพ์เฉพาะหน่วย หรือ **ดูรวมเล่มทั้งวิชา / PDF** เพื่อได้เล่มทั้งวิชาพร้อมปกและสารบัญ"],
+  tips:["ปลายภาคเรียน ควรดาวน์โหลดรวมเล่มเก็บไว้เป็นหลักฐาน"]},
+ {id:"faq",role:"all",icon:"info",go:"",title:"คำถามที่พบบ่อย",desc:"ปัญหาที่เจอบ่อยและวิธีแก้",
+  qa:[["เข้าสู่ระบบไม่ได้ ขึ้นว่าชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง","ตรวจตัวพิมพ์เล็ก-ใหญ่และภาษาของแป้นพิมพ์ ถ้ายังไม่ได้ ให้แอดมินโรงเรียนรีเซ็ตรหัสผ่าน"],
+   ["กดเขียนบันทึกแล้วขึ้นว่ายังไม่ได้กำหนดวิชา","ไปที่เมนู วิชาที่สอน แล้วเพิ่มวิชาของภาคเรียนนี้ก่อน"],
+   ["แก้บันทึกภาคเรียนที่แล้วไม่ได้","ระบบล็อกบันทึกของภาคเรียนที่ผ่านมาเพื่อเป็นหลักฐาน ยังเปิดดูและดาวน์โหลดได้ตามปกติ"],
+   ["ช่องลงชื่อใน PDF ไม่มีลายเซ็น","ทำลายเซ็นที่ บัญชีของฉัน แล้วเปิดเอกสารใหม่ ลายเซ็นจะขึ้นทุกฉบับ"],
+   ["เปลี่ยนเครื่องหรือเปลี่ยนโทรศัพท์ ข้อมูลจะหายไหม","ไม่หาย ข้อมูลเก็บบนระบบ เข้าสู่ระบบจากเครื่องไหนก็เห็นเหมือนกัน"],
+   ["หน้าเว็บไม่อัปเดต หรือแสดงผลแปลก","กดรีเฟรช (คอมพิวเตอร์กด Ctrl+Shift+R) หรือปิดแท็บแล้วเปิดใหม่"]]},
+ {id:"sign",role:"admin",icon:"pen",go:"sign",title:"ลงนามและให้ความเห็น",desc:"ลงนามทีละฉบับ หรือหลายฉบับพร้อมกัน",
+  steps:["ทำลายเซ็นของตนเองที่ **บัญชีของฉัน** ก่อน ลายเซ็นนี้จะไปอยู่ในช่องความคิดเห็นของผู้บริหาร",
+   "**ลงนามหลายฉบับ:** ไปที่เมนู **ลงนามบันทึก** เลือกครูหรือดูทั้งหมด ติ๊กรายการ (หรือ **เลือกทั้งหมด**)",
+   "เลือกข้อความสำเร็จรูป หรือพิมพ์ความคิดเห็นเอง แล้วกด **ลงนาม ... รายการ**",
+   "**ลงนามทีละฉบับ:** กด **ดู** เพื่อเปิดเอกสาร แล้วเขียนความเห็นในช่องข้างเอกสาร กด **ลงนาม**",
+   "แก้ความเห็นภายหลังได้ เปิดเอกสารนั้นแล้วกด **บันทึกการแก้ไข**"],
+  tips:["ตัวเลขสีแดงที่เมนูลงนาม คือจำนวนบันทึกที่รอลงนามในภาคเรียนที่เลือก"]},
+ {id:"track",role:"admin",icon:"track",go:"track",title:"ติดตามการส่งบันทึก",desc:"ดูว่าใครส่งแล้ว ใครยังไม่ส่ง",
+  steps:["ไปที่เมนู **ติดตามการส่ง**",
+   "เลือก **ช่วงเวลา** (รอบนี้ รอบที่แล้ว 30 วันล่าสุด หรือทั้งภาคเรียน) และ **กลุ่มสาระฯ**",
+   "ดูสถานะของครูแต่ละคน: **ส่งแล้ว / ยังไม่ส่ง / เลยกำหนด** ตามกำหนดส่งที่ตั้งไว้",
+   "กด **ดูบันทึก** หรือ **PDF** ของครูแต่ละคน และกด **CSV สรุป** เพื่อได้ตารางรายงาน"],
+  tips:["ครูที่ยังไม่กำหนดวิชาที่สอนจะแสดงรายชื่อแยกไว้ด้านล่าง"]},
+ {id:"people",role:"admin",icon:"users",go:"people",title:"จัดการบัญชีครู",desc:"สร้าง แก้ไข รีเซ็ตรหัสผ่าน ปิดใช้งาน",
+  steps:["ไปที่ **จัดการระบบ → ครูและผู้ดูแล** (บนโทรศัพท์อยู่ใน เมนู)",
+   "**เพิ่มทีละคน:** กรอกชื่อ ตำแหน่ง ชื่อผู้ใช้ และรหัสผ่านเริ่มต้น แล้วกด **สร้างบัญชี**",
+   "**เพิ่มหลายคน:** กรอกเป็นตาราง หรือคัดลอกรายชื่อจาก Excel มาวางที่ช่องชื่อ ช่องชื่อผู้ใช้และรหัสผ่านที่เว้นว่าง ระบบตั้งให้อัตโนมัติ",
+   "หลังสร้างหลายคน กด **ดาวน์โหลดรายชื่อ (CSV)** ทันที เพราะรหัสผ่านแสดงเพียงครั้งเดียว",
+   "**แก้ไข:** แก้ชื่อ ตำแหน่ง หรือชื่อผู้ใช้ (รหัสผ่านเดิมยังใช้ได้)",
+   "**รีเซ็ตรหัสผ่าน:** กด 2 ครั้งเพื่อยืนยัน รหัสใหม่จะแสดงด้านบน แจ้งครูเจ้าของบัญชี",
+   "**ปิดใช้งาน:** ใช้เมื่อครูย้ายหรือลาออก บันทึกเดิมยังอยู่ครบ เปิดใช้งานกลับได้"],
+  tips:["แอดมินโรงเรียนจัดการบัญชีครูได้ การแต่งตั้งผู้บริหารเป็นแอดมินโรงเรียนเพิ่ม ติดต่อผู้ดูแลระบบ","ชื่อผู้ใช้ใช้ได้เฉพาะอักษรอังกฤษตัวเล็ก ตัวเลข จุด ขีดล่าง และขีดกลาง ยาว 3–30 ตัว"]},
+ {id:"courses",role:"admin",icon:"grid",go:"courses",title:"รายวิชาของโรงเรียน",desc:"รายวิชาให้ครูเลือก แยกตามชั้น",
+  steps:["ไปที่ **จัดการระบบ → รายวิชาของโรงเรียน** แล้วกดปุ่มชั้นด้านบน (อ.1 – ม.3)",
+   "**เลือกจากหลักสูตร:** ติ๊กรายวิชาตามโครงสร้างหลักสูตรของโรงเรียน เลือกทั้งชั้นหรือทุกชั้นได้ แล้วกด **เพิ่ม ... รายวิชาที่เลือก**",
+   "**เพิ่มรายวิชา:** กรอกเองหลายแถว หรือคัดลอกจาก Excel (รหัสวิชา · ชื่อ · ชั่วโมง) มาวาง ระบบดูประเภทพื้นฐาน/เพิ่มเติมจากรหัสวิชาให้",
+   "กด **แก้ไข** หรือ **ลบ** ที่แต่ละรายวิชา (ลบต้องกด 2 ครั้ง)"],
+  tips:["มัธยมแยกภาคเรียนที่ 1 และ 2 ประถมเป็นรายปี · น้ำหนักหน่วยกิตคำนวณจากชั่วโมง (40 ชั่วโมง = 1.0)","ระดับปฐมวัยไม่ใช้รายวิชา ครูกรอกการจัดประสบการณ์เองที่วิชาที่สอน"]},
+ {id:"settings",role:"admin",icon:"gear",go:"settings",title:"ตั้งค่าโรงเรียนและกำหนดส่ง",desc:"ชื่อโรงเรียน ภาคเรียน รอบการส่ง",
+  steps:["ไปที่ **จัดการระบบ → ตั้งค่าโรงเรียน**",
+   "**ข้อมูลโรงเรียน:** ใส่ชื่อโรงเรียน (ใช้บนหัวเอกสารและหน้าเข้าสู่ระบบ)",
+   "**ภาคเรียน:** เลือก \"เปลี่ยนอัตโนมัติตามวันที่\" แล้วตั้งวันเปิดภาคเรียนที่ 1 และ 2 หรือเลือก \"กำหนดเอง\"",
+   "**กำหนดการส่ง:** เลือกรอบ (ทุกสัปดาห์ / ทุก 2 สัปดาห์ / ทุกเดือน) วันที่ต้องส่ง และจำนวนขั้นต่ำต่อรอบ แล้วกดบันทึก"],
+  tips:["กำหนดการส่งใช้คำนวณสถานะในหน้าหลักและหน้าติดตามการส่ง"]},
+ {id:"term",role:"admin",icon:"layers",go:"",title:"การขึ้นภาคเรียนใหม่",desc:"สิ่งที่ต้องทำช่วงปลายภาคและต้นภาค",
+  steps:["**ปลายภาค:** ดาวน์โหลด **CSV สรุป** และ **PDF รวมเล่ม** เก็บไว้ใน Google Drive ของโรงเรียน",
+   "**วันเปิดภาค:** ระบบเปลี่ยนภาคเรียนเอง ภาคเรียนเก่ายังดูและดาวน์โหลดได้ที่ช่อง **ภาคเรียน** มุมขวาบน",
+   "แจ้งครูให้กำหนด **วิชาที่สอน** ของภาคเรียนใหม่ (คัดลอกจากภาคก่อนได้)",
+   "ตรวจรายวิชาของโรงเรียน ถ้าโครงสร้างหลักสูตรเปลี่ยน ให้เพิ่มหรือแก้ไขก่อนครูเลือกวิชา"],
+  tips:["ครูย้ายเข้าใหม่ สร้างบัญชีเพิ่ม · ครูย้ายออก กดปิดใช้งาน ไม่ต้องลบ"]}
+];
+const VIEW_HELP={home:"start",account:"account",subjects:"subjects",write:"write",logs:"logs",doc:"pdf",binder:"binder",sign:"sign",track:"track",people:"people",courses:"courses",settings:"settings"};
+const helpFor=()=>HELP.filter(h=>h.role==="all"||isAdmin());
+const hb=t=>esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
+const hplain=t=>String(t).replace(/\*\*/g,"");
+function vHelp(m){
+  const list=helpFor(),adm=isAdmin(),open=S.helpSec||"";
+  const sec=h=>`<details class="hsec" id="h-${h.id}" data-txt="${esc((h.title+" "+h.desc+" "+(h.steps||[]).join(" ")+" "+(h.tips||[]).join(" ")+" "+(h.qa||[]).flat().join(" ")).replace(/\*\*/g,"").toLowerCase())}"${open===h.id?" open":""}>
+    <summary><span class="hic">${ic(h.icon)}</span><span class="ht"><b>${esc(h.title)}</b><small>${esc(h.desc)}</small></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></summary>
+    <div class="hbody">${h.steps?`<ol class="hsteps">${h.steps.map(s=>`<li>${hb(s)}</li>`).join("")}</ol>`:""}
+      ${h.qa?`<div class="hqa">${h.qa.map(([q,a])=>`<div><b>ถาม: ${esc(q)}</b><p>${esc(a)}</p></div>`).join("")}</div>`:""}
+      ${h.tips&&h.tips.length?`<div class="htip">${ic("info")}<div>${h.tips.map(t=>`<p>${hb(t)}</p>`).join("")}</div></div>`:""}
+      ${h.go&&NAV.some(n=>n.id===h.go&&(!n.admin||adm))?`<button class="btn sm" data-go="${h.go}">ไปที่หน้า${esc(TITLES[h.go])}</button>`:""}</div></details>`;
+  m.innerHTML=`<div class="card gold hhead"><div class="hrow"><div style="min-width:0;flex:1"><h2>คู่มือการใช้งาน${adm?"สำหรับผู้บริหารและแอดมินโรงเรียน":"สำหรับครูผู้สอน"}</h2><p class="muted" style="margin:2px 0 0">กดหัวข้อเพื่อเปิดอ่าน หรือกดปุ่ม <b>?</b> มุมขวาบนของแต่ละหน้า เพื่อเปิดคู่มือของหน้านั้น</p></div>
+    <button class="btn gold" id="hPdf">${ic("pdf")}ดาวน์โหลดคู่มือ (PDF)</button></div>
+    <label class="f" style="margin-top:12px"><span class="sr-only">ค้นหาในคู่มือ</span><input id="hq" type="search" placeholder="ค้นหาในคู่มือ เช่น ลายเซ็น รหัสผ่าน PDF" autocomplete="off"></label></div>
+  <div class="hgrp"><h3>สำหรับครูผู้สอน</h3>${list.filter(h=>h.role==="all").map(sec).join("")}</div>
+  ${adm?`<div class="hgrp"><h3>สำหรับผู้บริหารและแอดมินโรงเรียน</h3>${list.filter(h=>h.role==="admin").map(sec).join("")}</div>`:""}
+  <p class="muted hnone" hidden style="text-align:center">ไม่พบหัวข้อที่ค้นหา</p>
+  <p class="muted" style="text-align:center;font-size:.8rem;margin:4px 0 0">${esc(D.settings.school)} · ${esc(D.settings.credit)}</p>`;
+  $("hq").oninput=()=>{const q=$("hq").value.trim().toLowerCase();let n=0;m.querySelectorAll(".hsec").forEach(d=>{const ok=!q||d.dataset.txt.includes(q);d.hidden=!ok;if(ok)n++;if(q&&ok)d.open=true});
+    m.querySelectorAll(".hgrp").forEach(g=>g.hidden=![...g.querySelectorAll(".hsec")].some(d=>!d.hidden));m.querySelector(".hnone").hidden=n>0};
+  m.querySelectorAll(".hsec").forEach(d=>d.addEventListener("toggle",()=>{if(d.open)S.helpSec=d.id.slice(2)}));
+  $("hPdf").onclick=()=>previewParts(helpPages(),"คู่มือการใช้งาน_"+(adm?"ผู้บริหาร":"ครูผู้สอน"));
+  if(open){const el=$("h-"+open);if(el)setTimeout(()=>el.scrollIntoView({block:"start",behavior:"smooth"}),60)}
+}
+// คู่มือแบบ PDF: ใช้แผ่น A4 และการตัดบรรทัดเดียวกับบันทึกหลังสอน
+function helpPages(){
+  const adm=isAdmin(),list=helpFor(),it=[],at={};
+  const L=(t,ind,o)=>wrap(t,CW-ind-(o&&o.first||0),CW-ind).forEach((s,i)=>it.push({html:`<div class="ln" style="padding-left:${ind}px">${i===0&&o&&o.lead?o.lead:""}<span${o&&o.bold?' class="b"':""}>${esc(s)}</span></div>`,h:24,kn:!!(o&&o.kn)}));
+  list.forEach((h,k)=>{if(k&&h.role!==list[k-1].role)it.push({html:`<div class="hpgrp">สำหรับผู้บริหารและแอดมินโรงเรียน</div>`,h:44,kn:true});
+    if(k===0)it.push({html:`<div class="hpgrp">สำหรับครูผู้สอน</div>`,h:44,kn:true});
+    it.push({html:`<div class="hph" data-sec="${h.id}">${thd(k+1)}. ${esc(h.title)}</div>`,h:40,kn:true,sec:h.id});
+    (h.steps||[]).forEach((s,i)=>L(hplain(s),26,{lead:`<span class="hpn">${thd(i+1)}.</span>`}));
+    (h.qa||[]).forEach(([q,a])=>{L("ถาม: "+q,0,{bold:true,kn:true});L(a,22)});
+    (h.tips||[]).forEach(t=>L(hplain(t),26,{lead:`<span class="hpn">•</span>`}));
+    it.push({html:`<div style="height:14px"></div>`,h:14})});
+  const pages=paginate(it,"");pages.forEach((p,i)=>p.forEach(x=>{if(x.sec)at[x.sec]=i+1}));
+  const body=wrapPages(pages,"");
+  const toc=list.map((h,k)=>`<tr><td style="width:40px;text-align:center">${thd(k+1)}</td><td>${esc(h.title)}</td><td style="width:70px;text-align:center">${thd(at[h.id]||"")}</td></tr>`).join("");
+  const cover=`<div class="sheet cover"><span class="tag">${esc(D.settings.school)}</span><div class="cv" style="margin-top:40px"><div class="big">คู่มือการใช้งาน<br>สมุดบันทึกหลังสอน</div><div class="rule"></div>
+    <div class="meta">${adm?"ฉบับผู้บริหารและแอดมินโรงเรียน":"ฉบับครูผู้สอน"}<br>${esc(D.settings.school)}</div></div>
+    <table class="toc"><thead><tr><th style="text-align:center;width:56px">ที่</th><th>หัวข้อ</th><th style="text-align:center;width:80px">หน้า</th></tr></thead><tbody>${toc}</tbody></table>
+    <div style="position:absolute;left:0;right:0;bottom:40px;text-align:center;font-size:12px;color:#7a5546">${esc(D.settings.credit)}</div></div>`;
+  return [cover,...body];
+}
+
 // ---------- modal (หน้าต่างลอย ใช้กรอกฟอร์มโดยไม่ดันหน้าเลื่อน)
 function openModal(title,html,{wide=false,keep=false}={}){
   closeModal(true);
   const w=document.createElement("div");w.className="modal";w.id="modal";if(keep)w.dataset.keep="1";
-  w.innerHTML=`<div class="mpanel${wide?" wide":""}" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mhead"><h2 id="mTitle">${esc(title)}</h2><button type="button" class="btn sm ghost mx" aria-label="ปิด" title="ปิด">${ic("x")}</button></div><div class="mbody" id="mBody">${html}</div></div>`;
+  w.innerHTML=`<div class="mpanel${wide?" wide":""}" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mdhead"><h2 id="mTitle">${esc(title)}</h2><button type="button" class="btn sm ghost mx" aria-label="ปิด" title="ปิด">${ic("x")}</button></div><div class="mbody" id="mBody">${html}</div></div>`;
   document.body.appendChild(w);document.body.classList.add("noscroll");
   w.querySelector(".mx").onclick=()=>closeModal();
   w.addEventListener("click",e=>{if(e.target.closest("[data-mx]"))closeModal()});
@@ -1046,7 +1195,9 @@ window.addEventListener("resize",()=>{clearTimeout(fitSheets.t);fitSheets.t=setT
 let closePvw=null;
 function makePdf(logs,name,coverAssign){
   if(!logs.length){toast("ไม่มีบันทึกให้สร้าง PDF");return}
-  const parts=(coverAssign?coverPages(coverAssign,logs):[]).concat(logs.flatMap(sheetPages)),pv=$("pvw");
+  previewParts((coverAssign?coverPages(coverAssign,logs):[]).concat(logs.flatMap(sheetPages)),name);
+}
+function previewParts(parts,name){const pv=$("pvw");
   pv.innerHTML=`<div class="pvw-bar gut"><button class="x" id="pvX" aria-label="ปิดตัวอย่าง">${ic("x")}</button><div class="t"><b>${esc(name)}.pdf</b><small>ตัวอย่างก่อนดาวน์โหลด · ${parts.length} หน้า · กระดาษ A4</small></div>
     <button class="btn gold" id="pvDl">${ic("pdf")}<span>ดาวน์โหลด PDF</span></button></div>
     <div class="pvw-body gut">${parts.map((h,i)=>`<div class="pg"><div class="sheetfit">${h}</div><small>หน้า ${i+1} / ${parts.length}</small></div>`).join("")}</div>`;
@@ -1159,7 +1310,7 @@ function stopData(){Object.keys(subs).forEach(k=>{if(k!=="settings"&&k!=="me")un
 function live(){
   if(S.screen!=="app")return;
   const ae=document.activeElement,typing=ae&&$("main").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-  if(typing||["write","account","settings"].includes(S.view)||!$("pvw").hidden){renderNav();renderTermSel();return}
+  if(typing||["write","account","settings","help"].includes(S.view)||!$("pvw").hidden){renderNav();renderTermSel();return}
   render();
 }
 function setTerm(t){if(!t||t===S.term)return;S.term=t;if(S.screen==="app")subTerm()}
