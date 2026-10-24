@@ -189,6 +189,10 @@ const TITLES={help:"คู่มือการใช้งาน",courses:"ร�
 const navItems=()=>NAV.filter(n=>!n.admin||isAdmin());
 const activeTab=()=>S.view==="doc"?S.back:S.view;
 function pendingCount(){if(!isAdmin())return 0;return D.logs.filter(l=>l.term===S.term&&!reviewed(l.id)).length}
+// ชื่อในกล่องโปรไฟล์อยู่บรรทัดเดียว ย่อขนาดตัวอักษรตามความยาวชื่อ
+function fitName(){const mn=$("meName");if(!mn)return;const run=()=>{mn.style.fontSize="";if(!mn.clientWidth)return;const rg=document.createRange();rg.selectNodeContents(mn);const over=()=>rg.getBoundingClientRect().width>mn.getBoundingClientRect().width-1;let f=14.4;while(f>6&&over()){f-=.2;mn.style.fontSize=f.toFixed(1)+"px"}};
+  requestAnimationFrame(run);if(document.fonts&&document.fonts.ready)document.fonts.ready.then(run)}
+window.addEventListener("resize",()=>{clearTimeout(fitName.t);fitName.t=setTimeout(fitName,100)});
 function renderNav(){
   const a=activeTab(),pc=pendingCount();
   const MANAGE=["people","courses","settings"],sbtn=n=>`<button class="navbtn${n.fab?" write":""}" data-go="${n.id}"${a===n.id?' aria-current="page"':""}>${ic(n.icon)}<span>${n.label}</span>${n.id==="sign"&&pc?`<span class="cnt">${pc}</span>`:""}</button>`;
@@ -210,7 +214,7 @@ function renderNav(){
     :`<button data-go="${n.id}"${a===n.id||(n.id==="_more"&&extra.some(e=>e.id===a))?' aria-current="page"':""}>${ic(n.icon)}<span>${n.short}</span>${n.id==="sign"&&pc?`<span class="dot">${pc}</span>`:""}</button>`).join("");
   $("moreList").innerHTML=`<div class="mhead"><b>เมนูเพิ่มเติม</b><button class="x2" id="moreX" aria-label="ปิดเมนู">${ic("x")}</button></div>`+extra.map(n=>`<button class="item" data-go="${n.id}">${ic(n.icon)}${n.label}</button>`).join("")+`<button class="item" id="moreOut">${ic("logout")}ออกจากระบบ</button>`;
   $("moreX").onclick=()=>$("more").hidden=true;$("moreOut").onclick=()=>{$("more").hidden=true;logout()};
-  const u=me();$("meAv").textContent=ini(u.name);$("meName").textContent=u.name;$("meRole").textContent=u.position||ROLE[u.role];
+  const u=me();$("meAv").textContent=ini(u.name);{const mn=$("meName");mn.textContent=u.name;mn.title=u.name;fitName()}$("meRole").textContent=u.position||ROLE[u.role];
   $("schoolSide").textContent=D.settings.school;$("creditSide").textContent=D.settings.credit;
 }
 function renderTermSel(){

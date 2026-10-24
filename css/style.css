@@ -538,3 +538,10 @@ body.noscroll{overflow:hidden}
 .sheet .hph{height:40px;line-height:40px;font-size:17px;font-weight:700;color:#7a1010;border-bottom:1.5px solid #c08a1e;margin-bottom:0;white-space:nowrap;overflow:hidden}
 .sheet .hpgrp{height:44px;line-height:52px;font-size:13px;font-weight:700;color:#7a5546;letter-spacing:.02em}
 .sheet .hpn{display:inline-block;width:26px;margin-left:-26px;color:#7a1010;font-weight:700}
+
+/* ชื่อในกล่องโปรไฟล์: ตัดบรรทัดเฉพาะระหว่างชื่อกับนามสกุล ไม่ตัดกลางคำ */
+.side .me .metx b{display:block;white-space:nowrap;overflow:visible;text-overflow:clip;overflow-wrap:normal}
+.side .me .metx{flex:1;min-width:0;display:flex;flex-direction:column}
+.side .me .mebtn{gap:8px;padding:6px 6px}
+.side .me .avatar{width:34px;height:34px}
+.side .me .out{padding:6px}
