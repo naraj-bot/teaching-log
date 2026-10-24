@@ -558,62 +558,217 @@ function vCourses(m){
       <tbody>${rows.length?body:`<tr><td colspan="4" class="c muted">ยังไม่มีรายวิชา</td></tr>`}</tbody></table></div></div>`};
   m.innerHTML=`${!D.courses.length?`<div class="banner">${ic("info")}<div style="flex:1">ยังไม่มีรายวิชาในระบบ นำเข้ารายวิชาตามโครงสร้างหลักสูตรของโรงเรียน (ป.1–ป.6 และ ม.1–ม.3) ได้ในคลิกเดียว แล้วแก้ไขต่อได้</div><button class="btn gold sm" id="cSeed">นำเข้า ${buildCourseSeed().length} รายการ</button></div>`:""}
   <div class="card gold"><div class="grid-f"><label class="f">ชั้น<select id="cG">${GRADES.map(x=>`<option${x===g?" selected":""}>${x}</option>`).join("")}</select></label>
-    <div class="f"><span>ระดับ</span><div style="min-height:42px;display:flex;align-items:center"><span class="chip red">${esc(lv)}${lv==="มัธยมศึกษา"?" · แยกภาคเรียน 1 และ 2":lv==="ประถมศึกษา"?" · รายปี (ภาคเรียนที่ 1,2)":""}</span></div></div></div></div>
+    <div class="f"><span>ระดับ</span><div style="min-height:42px;display:flex;align-items:center"><span class="chip red">${esc(lv)}${lv==="มัธยมศึกษา"?" · แยกภาคเรียน 1 และ 2":lv==="ประถมศึกษา"?" · รายปี (ภาคเรียนที่ 1,2)":""}</span></div></div>
+    ${lv==="อนุบาล"?"":`<div class="f"><span>&nbsp;</span><button class="btn primary" id="cAdd">${ic("plus")}เพิ่มรายวิชา ${esc(g)}</button></div>`}</div></div>
   ${lv==="อนุบาล"?`<div class="card muted">ระดับปฐมวัยใช้หน่วยการจัดประสบการณ์ ไม่มีรายวิชา ครูกำหนดได้เองที่เมนู "วิชาที่สอน"</div>`:sems.map(table).join("")}
-  ${lv==="อนุบาล"?"":`<form class="card gold stack" id="cf"><h2>${ed?"แก้ไขรายวิชา":"เพิ่มรายวิชา"} · ชั้น ${esc(g)}</h2><div class="grid-f">
+`;
+  $("cG").onchange=e=>{S.cg=e.target.value;S.ce=null;render()};
+  $("cSeed")&&($("cSeed").onclick=()=>{$("cSeed").disabled=true;courseSeed()});
+  m.querySelectorAll("[data-ce]").forEach(b=>b.onclick=()=>courseForm(g,lv,sems,D.courses.find(c=>c.id===b.dataset.ce)));
+  $("cAdd")&&($("cAdd").onclick=()=>courseForm(g,lv,sems,null));
+  m.querySelectorAll("[data-cd]").forEach(b=>b.onclick=()=>{if(!b.dataset.arm){b.dataset.arm="1";b.textContent="กดอีกครั้งเพื่อลบ";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="ลบ"}},3000);return}courseDel(b.dataset.cd)});
+}
+
+function courseForm(g,lv,sems,ed){
+  openModal((ed?"แก้ไขรายวิชา":"เพิ่มรายวิชา")+" · ชั้น "+g,`<form class="stack" id="cf" novalidate><div class="grid-f">
     <label class="f">ภาคเรียน<select id="cS">${sems.map(s=>`<option value="${s}"${(ed?ed.sem:sems[0])===s?" selected":""}>ภาคเรียนที่ ${s}</option>`).join("")}</select></label>
     <label class="f">ประเภท<select id="cT">${["พื้นฐาน","เพิ่มเติม","กิจกรรม"].map(t=>`<option value="${t}"${(ed?ed.type:"พื้นฐาน")===t?" selected":""}>${t==="กิจกรรม"?"กิจกรรมพัฒนาผู้เรียน":"รายวิชา"+t}</option>`).join("")}</select></label>
     <label class="f">รหัสวิชา<input id="cC" maxlength="12" value="${esc(ed?ed.code:"")}" placeholder="เช่น ส21103 (กิจกรรมเว้นว่างได้)"></label>
     <label class="f">ชั่วโมง<input id="cH" type="number" min="1" max="400" inputmode="numeric" value="${esc(ed?ed.hours:"")}" placeholder="เช่น 40"></label>
     <label class="f wide">ชื่อรายวิชา<input id="cN" maxlength="100" value="${esc(ed?ed.name:"")}" placeholder="เช่น ประวัติศาสตร์ 1"></label></div>
-    <div class="actions"><button class="btn primary" type="submit">${ed?"บันทึกการแก้ไข":ic("plus")+"เพิ่มรายวิชา"}</button>${ed?`<button type="button" class="btn" id="cX">ยกเลิก</button>`:""}<span class="muted" id="cCr" style="font-size:.86rem"></span><span class="err" id="cerr"></span></div></form>`}`;
-  $("cG").onchange=e=>{S.cg=e.target.value;S.ce=null;render()};
-  $("cSeed")&&($("cSeed").onclick=()=>{$("cSeed").disabled=true;courseSeed()});
-  m.querySelectorAll("[data-ce]").forEach(b=>b.onclick=()=>{S.ce=b.dataset.ce;render();$("cf").scrollIntoView({behavior:"smooth",block:"center"})});
-  m.querySelectorAll("[data-cd]").forEach(b=>b.onclick=()=>{if(!b.dataset.arm){b.dataset.arm="1";b.textContent="กดอีกครั้งเพื่อลบ";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="ลบ"}},3000);return}courseDel(b.dataset.cd)});
-  if(lv==="อนุบาล")return;
+    <div class="actions"><button class="btn primary" type="submit">${ed?ic("check")+"บันทึกการแก้ไข":ic("plus")+"เพิ่มรายวิชา"}</button><button type="button" class="btn" data-mx>ยกเลิก</button><span class="muted" id="cCr" style="font-size:.86rem"></span><span class="err" id="cerr"></span></div></form>`);
   const cr=()=>{const h=+$("cH").value;$("cCr").textContent=h>0&&$("cT").value!=="กิจกรรม"?`น้ำหนัก ${credit(h)} หน่วยกิต`:""};$("cH").oninput=cr;$("cT").onchange=cr;cr();
-  $("cX")&&($("cX").onclick=()=>{S.ce=null;render()});
-  $("cf").addEventListener("submit",e=>{e.preventDefault();const name=$("cN").value.trim(),h=parseInt($("cH").value,10),t=$("cT").value,code=$("cC").value.trim();
+  $("cf").addEventListener("submit",e=>{e.preventDefault();$("cerr").textContent="";const name=$("cN").value.trim(),h=parseInt($("cH").value,10),t=$("cT").value,code=$("cC").value.trim();
     if(!name){$("cerr").textContent="กรอกชื่อรายวิชา";return}if(!(h>0&&h<=400)){$("cerr").textContent="กรอกชั่วโมง 1–400";return}
     const c={grade:g,sem:$("cS").value,code,name,hours:h,type:t,group:t==="กิจกรรม"?"กิจกรรมพัฒนาผู้เรียน":(GROUP_OF[code[0]]||""),level:lv,order:ed&&ed.order!=null?ed.order:9000+D.courses.length};
-    if(ed)c.id=ed.id;S.ce=null;courseSave(c)});
+    if(ed)c.id=ed.id;closeModal(true);courseSave(c)});
 }
+
+// ---------- modal (หน้าต่างลอย ใช้กรอกฟอร์มโดยไม่ดันหน้าเลื่อน)
+function openModal(title,html,{wide=false,keep=false}={}){
+  closeModal(true);
+  const w=document.createElement("div");w.className="modal";w.id="modal";if(keep)w.dataset.keep="1";
+  w.innerHTML=`<div class="mpanel${wide?" wide":""}" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mhead"><h2 id="mTitle">${esc(title)}</h2><button type="button" class="btn sm ghost mx" aria-label="ปิด" title="ปิด">${ic("x")}</button></div><div class="mbody" id="mBody">${html}</div></div>`;
+  document.body.appendChild(w);document.body.classList.add("noscroll");
+  w.querySelector(".mx").onclick=()=>closeModal();
+  w.addEventListener("click",e=>{if(e.target.closest("[data-mx]"))closeModal()});
+  setTimeout(()=>{const f=w.querySelector(".mbody input:not([type=hidden]):not([readonly]),.mbody select");f&&f.focus()},40);
+  return $("mBody");
+}
+function closeModal(silent){const m=$("modal");if(!m)return;if(!silent&&m.dataset.keep&&m.dataset.dirty&&!confirmLeave(m))return;m.remove();document.body.classList.remove("noscroll")}
+function confirmLeave(m){const b=m.querySelector(".mx");if(b.dataset.arm)return true;b.dataset.arm="1";toast("ข้อมูลที่กรอกจะหายไป กดปิดอีกครั้งเพื่อยืนยัน");setTimeout(()=>{if(b.isConnected)delete b.dataset.arm},3000);return false}
+
+// ---------- ชื่อผู้ใช้อัตโนมัติ (เดาจากรูปแบบที่โรงเรียนใช้ เช่น bpt001, bpt002)
+function userPattern(){
+  const cnt={};D.users.forEach(u=>{const mm=/^([a-z._-]*?)(\d+)$/.exec(u.username||"");if(!mm)return;const k=mm[1];cnt[k]=cnt[k]||{n:0,w:0,max:0,t:0};const c=cnt[k];c.n++;c.w=Math.max(c.w,mm[2].length);c.max=Math.max(c.max,+mm[2]);if(u.role==="teacher")c.t++});
+  const best=Object.entries(cnt).sort((a,b)=>b[1].t-a[1].t||b[1].n-a[1].n)[0];
+  return best?{prefix:best[0],width:best[1].w}:{prefix:"teacher",width:2};
+}
+function autoUsernames(prefix,width,count,taken){
+  const out=[];let n=0;D.users.forEach(u=>{const mm=new RegExp("^"+prefix.replace(/[.]/g,"\\.")+"(\\d+)$").exec(u.username||"");if(mm)n=Math.max(n,+mm[1])});
+  while(out.length<count){n++;const v=prefix+String(n).padStart(width,"0");if(!taken.has(v))out.push(v)}
+  return out;
+}
+const tmpPw=()=>String(Math.floor(100000+Math.random()*900000));
 
 // ---------- view: people (admin)
 function vPeople(m){
   if(!isAdmin()){go("home");return}
   const order={superadmin:0,admin:1,teacher:2};
-  const us=[...D.users].filter(u=>isSuper()||u.role!=="superadmin").sort((a,b)=>order[a.role]-order[b.role]||a.name.localeCompare(b.name,"th"));
+  const us=[...D.users].filter(u=>isSuper()||u.role!=="superadmin").sort((a,b)=>order[a.role]-order[b.role]||(a.active===false)-(b.active===false)||a.name.localeCompare(b.name,"th"));
   const canManage=u=>u.id!==S.me&&(u.role==="teacher"||(isSuper()&&u.role==="admin"));
-  const tmp=()=>String(Math.floor(100000+Math.random()*900000));
-  m.innerHTML=`<div class="banner">${ic("info")}<div>${isSuper()?"แอดมินหลักสร้างบัญชี แต่งตั้งแอดมินโรงเรียน (เช่น ผู้อำนวยการ หัวหน้างานวิชาการ) และรีเซ็ตรหัสผ่านได้ทุกบัญชี":"แอดมินโรงเรียนสร้างบัญชีครู รีเซ็ตรหัสผ่าน และปิดการใช้งานบัญชีครูได้"} · ครูเข้าสู่ระบบด้วยชื่อผู้ใช้และรหัสผ่านที่กำหนดในหน้านี้</div></div>
-  ${S.pwNote?`<div class="banner" style="background:var(--good-soft);border-color:var(--good)">${ic("check")}<div>${S.pwNote}</div></div>`:""}
-  <div class="card" style="padding:0"><div class="tw"><table class="t cards"><thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>ตำแหน่ง</th><th class="c">สิทธิ์</th><th class="c">วิชา (${esc(S.term)})</th><th class="c">จัดการ</th></tr></thead><tbody>
-  ${us.map(u=>`<tr><td class="full"><b class="nw">${esc(u.name)}</b>${u.id===S.me?' <span class="chip">ฉัน</span>':""}${u.active?"":' <span class="chip bad">ปิดใช้งาน</span>'}</td>
+  const nT=us.filter(u=>u.role==="teacher"&&u.active).length,nA=us.filter(u=>u.role==="admin"&&u.active).length,nOff=us.filter(u=>!u.active).length;
+  m.innerHTML=`${S.pwNote?`<div class="banner" style="background:var(--good-soft);border-color:var(--good)">${ic("check")}<div style="flex:1">${S.pwNote}</div><button class="btn sm ghost" id="pwX" aria-label="ปิดข้อความ">${ic("x")}</button></div>`:""}
+  <div class="card ptool"><div class="prow">
+    <label class="f psearch"><span class="sr-only">ค้นหา</span><input id="pq" type="search" placeholder="ค้นหาชื่อ ชื่อผู้ใช้ หรือตำแหน่ง" value="${esc(S.pq||"")}" autocomplete="off"></label>
+    <label class="f pfilter"><span class="sr-only">กรองตามสิทธิ์</span><select id="pr">${[["","ทุกบัญชี ("+us.length+")"],["admin","แอดมินโรงเรียน ("+nA+")"],["teacher","ครูผู้สอน ("+nT+")"],["off","ปิดใช้งาน ("+nOff+")"]].map(([v,t])=>`<option value="${v}"${(S.pr||"")===v?" selected":""}>${t}</option>`).join("")}</select></label>
+    <div class="pbtns"><button class="btn" id="pAdd1">${ic("plus")}เพิ่มทีละคน</button><button class="btn primary" id="pAddN">${ic("plus")}เพิ่มหลายคน</button></div>
+  </div><div class="muted pcount" id="pCount"></div></div>
+  <div class="card" style="padding:0"><div class="tw ptable" id="pTable"><table class="t cards"><thead><tr><th>ชื่อ</th><th>ชื่อผู้ใช้</th><th>ตำแหน่ง</th><th class="c">สิทธิ์</th><th class="c">วิชา (${esc(S.term)})</th><th class="c">จัดการ</th></tr></thead><tbody>
+  ${us.map(u=>`<tr data-s="${esc([u.name,u.username,u.position,u.google].join(" ").toLowerCase())}" data-r="${u.role}" data-on="${u.active?1:0}"><td class="full"><b class="nw">${esc(u.name)}</b>${u.id===S.me?' <span class="chip">ฉัน</span>':""}${u.active?"":' <span class="chip bad">ปิดใช้งาน</span>'}</td>
     <td data-l="ชื่อผู้ใช้">${u.google?`<span class="chip gold">Google</span> <small class="muted">${esc(u.google)}</small>`:`<code>${esc(u.username)}</code>`}</td><td data-l="ตำแหน่ง">${esc(u.position)}</td>
-    <td class="c" data-l="สิทธิ์">${u.role==="superadmin"?'<span class="chip gold">แอดมินหลัก</span>':isSuper()?`<select data-role="${u.id}" aria-label="สิทธิ์ของ ${esc(u.name)}"><option value="teacher"${u.role==="teacher"?" selected":""}>ครูผู้สอน</option><option value="admin"${u.role==="admin"?" selected":""}>แอดมินโรงเรียน</option></select>`:`<span class="chip ${u.role==="admin"?"red":""}">${ROLE[u.role]}</span>`}</td>
+    <td class="c" data-l="สิทธิ์">${u.role==="superadmin"?'<span class="chip gold">แอดมินหลัก</span>':`<span class="chip ${u.role==="admin"?"red":""}">${ROLE[u.role]}</span>`}</td>
     <td class="num" data-l="วิชา">${myAssigns(u.id,S.term).length}</td>
-    <td class="full c">${canManage(u)?`<div class="row2" style="gap:6px;justify-content:center"><button class="btn sm" data-reset="${u.id}">รีเซ็ตรหัสผ่าน</button><button class="btn sm${u.active?" danger":""}" data-act="${u.id}">${u.active?"ปิดใช้งาน":"เปิดใช้งาน"}</button></div>`:'<span class="muted">—</span>'}</td></tr>`).join("")}
+    <td class="full c">${canManage(u)?`<div class="row2 pact"><button class="btn sm" data-edit="${u.id}">${ic("edit")}แก้ไข</button><button class="btn sm" data-reset="${u.id}">รีเซ็ตรหัสผ่าน</button><button class="btn sm${u.active?" danger":""}" data-act="${u.id}">${u.active?"ปิดใช้งาน":"เปิดใช้งาน"}</button></div>`:u.id===S.me?`<button class="btn sm ghost" data-go="account">บัญชีของฉัน</button>`:'<span class="muted">—</span>'}</td></tr>`).join("")}
+  <tr class="pnone" hidden><td colspan="6" class="c muted">ไม่พบบัญชีที่ค้นหา</td></tr>
   </tbody></table></div></div>
-  <form class="card gold stack" id="addT"><h2>สร้างบัญชีใหม่</h2><div class="grid-f">
-    <label class="f">ชื่อ-นามสกุล<input id="pN" maxlength="80" placeholder="คำนำหน้า ชื่อ นามสกุล"></label>
-    <label class="f">ตำแหน่ง<input id="pP" maxlength="80" placeholder="เช่น ครูชำนาญการ"></label>
-    <label class="f">ชื่อผู้ใช้ (ภาษาอังกฤษ/ตัวเลข)<input id="pU" maxlength="30" autocapitalize="none" spellcheck="false" placeholder="เช่น teacher06"></label>
-    <label class="f">รหัสผ่านเริ่มต้น<input id="pW" maxlength="30" value="${tmp()}"></label>
-    ${isSuper()?`<label class="f">สิทธิ์<select id="pR"><option value="teacher">ครูผู้สอน</option><option value="admin">แอดมินโรงเรียน</option></select></label>`:""}
-  </div><div class="actions"><button class="btn primary" type="submit">${ic("plus")}สร้างบัญชี</button><span class="err" id="perr"></span></div></form>`;
-  m.querySelectorAll("[data-role]").forEach(s=>s.onchange=async()=>{s.disabled=true;try{await api("setRole",{uid:s.dataset.role,role:s.value});toast(s.value==="admin"?"แต่งตั้งเป็นแอดมินโรงเรียนแล้ว":"เปลี่ยนเป็นครูผู้สอนแล้ว")}catch(e){toast(e.message);render()}});
-  m.querySelectorAll("[data-act]").forEach(b=>b.onclick=async()=>{const u=user(b.dataset.act),on=!u.active;b.disabled=true;try{await api("setActive",{uid:u.id,active:on});toast(on?"เปิดใช้งานแล้ว":"ปิดใช้งานแล้ว ข้อมูลบันทึกเดิมยังอยู่ครบ")}catch(e){toast(e.message);b.disabled=false}});
-  m.querySelectorAll("[data-reset]").forEach(b=>b.onclick=async()=>{const u=user(b.dataset.reset),npw=tmp();b.disabled=true;try{await api("resetPassword",{uid:u.id,password:npw})}catch(e){toast(e.message);b.disabled=false;return}S.pwNote=`รหัสผ่านใหม่ของ <b>${esc(u.name)}</b> (ชื่อผู้ใช้ <code>${esc(u.username)}</code>) คือ <b style="font-size:1.1em;letter-spacing:.08em">${npw}</b> แจ้งเจ้าของบัญชี แล้วให้เปลี่ยนรหัสผ่านที่เมนู "บัญชีของฉัน"`;render();window.scrollTo(0,0)});
+  <p class="muted" style="font-size:.84rem;margin:0">${isSuper()?"แอดมินหลักจัดการได้ทุกบัญชี และแต่งตั้งแอดมินโรงเรียน (เช่น ผู้อำนวยการ หัวหน้างานวิชาการ) ได้ที่ปุ่ม \"แก้ไข\"":"แอดมินโรงเรียนสร้าง แก้ไข รีเซ็ตรหัสผ่าน และปิดการใช้งานบัญชีครูได้"} · บัญชีที่ปิดใช้งานแล้ว บันทึกเดิมยังอยู่ครบ</p>`;
+  const filt=()=>{const q=$("pq").value.trim().toLowerCase(),r=$("pr").value;S.pq=$("pq").value;S.pr=r;let n=0;
+    m.querySelectorAll("#pTable tbody tr[data-s]").forEach(tr=>{const ok=(!q||tr.dataset.s.includes(q))&&(!r||(r==="off"?tr.dataset.on==="0":tr.dataset.r===r&&tr.dataset.on==="1"));tr.hidden=!ok;if(ok)n++});
+    m.querySelector(".pnone").hidden=n>0;$("pCount").textContent=`แสดง ${n} จาก ${us.length} บัญชี`};
+  $("pq").oninput=filt;$("pr").onchange=filt;filt();
+  $("pwX")&&($("pwX").onclick=()=>{S.pwNote="";render()});
+  $("pAdd1").onclick=addOne;$("pAddN").onclick=()=>addMany();
+  m.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editUser(user(b.dataset.edit)));
+  m.querySelectorAll("[data-act]").forEach(b=>b.onclick=async()=>{const u=user(b.dataset.act),on=!u.active;
+    if(!on&&!b.dataset.arm){b.dataset.arm="1";b.textContent="กดอีกครั้งเพื่อยืนยัน";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="ปิดใช้งาน"}},3000);return}
+    b.disabled=true;try{await api("setActive",{uid:u.id,active:on});toast(on?"เปิดใช้งานแล้ว":"ปิดใช้งานแล้ว ข้อมูลบันทึกเดิมยังอยู่ครบ")}catch(e){toast(e.message);b.disabled=false}});
+  m.querySelectorAll("[data-reset]").forEach(b=>b.onclick=async()=>{const u=user(b.dataset.reset),npw=tmpPw();
+    if(!b.dataset.arm){b.dataset.arm="1";b.textContent="กดอีกครั้งเพื่อยืนยัน";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="รีเซ็ตรหัสผ่าน"}},3000);return}
+    b.disabled=true;try{await api("resetPassword",{uid:u.id,password:npw})}catch(e){toast(e.message);b.disabled=false;return}
+    S.pwNote=`รหัสผ่านใหม่ของ <b>${esc(u.name)}</b> (ชื่อผู้ใช้ <code>${esc(u.username)}</code>) คือ <b style="font-size:1.1em;letter-spacing:.08em">${npw}</b> แจ้งเจ้าของบัญชี แล้วให้เปลี่ยนรหัสผ่านที่เมนู "บัญชีของฉัน"`;render();window.scrollTo(0,0)});
+}
+
+function roleSel(id,val){return isSuper()?`<label class="f">สิทธิ์<select id="${id}"><option value="teacher"${val!=="admin"?" selected":""}>ครูผู้สอน</option><option value="admin"${val==="admin"?" selected":""}>แอดมินโรงเรียน</option></select></label>`:""}
+function checkUsername(un,selfId){
+  if(!/^[a-z0-9._-]{3,30}$/.test(un))return "ชื่อผู้ใช้ใช้ a-z 0-9 . _ - ความยาว 3–30 ตัว";
+  if(D.users.some(u=>u.username===un&&u.id!==selfId))return "ชื่อผู้ใช้ "+un+" มีคนใช้แล้ว";
+  return "";
+}
+
+function addOne(){
+  const pt=userPattern(),sug=autoUsernames(pt.prefix,pt.width,1,new Set(D.users.map(u=>u.username)))[0];
+  const b=openModal("เพิ่มบัญชีทีละคน",`<form class="stack" id="addT" novalidate><div class="grid-f">
+    <label class="f wide">ชื่อ-นามสกุล<input id="pN" maxlength="80" placeholder="คำนำหน้า ชื่อ นามสกุล"></label>
+    <label class="f">ตำแหน่ง<input id="pP" maxlength="80" placeholder="เช่น ครูชำนาญการ" value="ครู"></label>
+    <label class="f">ชื่อผู้ใช้<input id="pU" maxlength="30" autocapitalize="none" autocomplete="off" spellcheck="false" value="${esc(sug)}"></label>
+    <label class="f">รหัสผ่านเริ่มต้น<input id="pW" maxlength="30" value="${tmpPw()}" autocomplete="off"></label>
+    ${roleSel("pR","teacher")}
+  </div><div class="actions"><button class="btn primary" type="submit">${ic("plus")}สร้างบัญชี</button><button type="button" class="btn" data-mx>ยกเลิก</button><span class="err" id="perr"></span></div></form>`);
   $("addT").addEventListener("submit",async e=>{e.preventDefault();$("perr").textContent="";const n=$("pN").value.trim(),un=$("pU").value.trim().toLowerCase(),pw=$("pW").value.trim();
-    if(!n){$("perr").textContent="กรอกชื่อ-นามสกุล";return}
-    if(!/^[a-z0-9._-]{3,30}$/.test(un)){$("perr").textContent="ชื่อผู้ใช้ใช้ a-z 0-9 . _ - ความยาว 3–30 ตัว";return}
-    if(D.users.some(u=>u.username===un)){$("perr").textContent="ชื่อผู้ใช้นี้มีแล้ว";return}
+    if(!n){$("perr").textContent="กรอกชื่อ-นามสกุล";$("pN").focus();return}
+    const ue=checkUsername(un);if(ue){$("perr").textContent=ue;$("pU").focus();return}
     if(pw.length<6){$("perr").textContent="รหัสผ่านอย่างน้อย 6 ตัว";return}
-    const btn=e.submitter||$("addT").querySelector("button[type=submit]");btn.disabled=true;
-    try{await api("create",{name:n,username:un,password:pw,position:$("pP").value.trim(),role:$("pR")?$("pR").value:"teacher"})}catch(x){$("perr").textContent=x.message;btn.disabled=false;return}
-    S.pwNote=`สร้างบัญชี <b>${esc(n)}</b> แล้ว · ชื่อผู้ใช้ <code>${esc(un)}</code> รหัสผ่าน <b>${esc(pw)}</b>`;render();window.scrollTo(0,0)});
+    const btn=$("addT").querySelector("button[type=submit]");btn.disabled=true;btn.textContent="กำลังสร้าง…";
+    try{await api("create",{name:n,username:un,password:pw,position:$("pP").value.trim(),role:$("pR")?$("pR").value:"teacher"})}catch(x){$("perr").textContent=x.message;btn.disabled=false;btn.innerHTML=ic("plus")+"สร้างบัญชี";return}
+    closeModal(true);S.pwNote=`สร้างบัญชี <b>${esc(n)}</b> แล้ว · ชื่อผู้ใช้ <code>${esc(un)}</code> รหัสผ่าน <b style="letter-spacing:.06em">${esc(pw)}</b>`;S.pq="";S.pr="";render();window.scrollTo(0,0)});
+}
+
+function editUser(u){
+  if(!u)return;
+  openModal("แก้ไขข้อมูลบัญชี",`<form class="stack" id="eu" novalidate><div class="grid-f">
+    <label class="f wide">ชื่อ-นามสกุล<input id="eN" maxlength="80" value="${esc(u.name)}"></label>
+    <label class="f">ตำแหน่ง<input id="eP" maxlength="80" value="${esc(u.position)}"></label>
+    <label class="f">ชื่อผู้ใช้<input id="eU" maxlength="30" autocapitalize="none" autocomplete="off" spellcheck="false" value="${esc(u.username)}"></label>
+    ${roleSel("eR",u.role)}
+  </div><p class="muted" id="eHint" style="margin:0;font-size:.86rem" hidden>เปลี่ยนชื่อผู้ใช้แล้ว ต้องแจ้งเจ้าของบัญชีให้เข้าสู่ระบบด้วยชื่อผู้ใช้ใหม่ (รหัสผ่านเดิมยังใช้ได้)</p>
+  <p class="muted" style="margin:0;font-size:.86rem">บันทึกหลังสอนที่ส่งไปแล้วจะคงชื่อตามที่ครูกรอกไว้ในแต่ละฉบับ</p>
+  <div class="actions"><button class="btn primary" type="submit">${ic("check")}บันทึกการแก้ไข</button><button type="button" class="btn" data-mx>ยกเลิก</button><span class="err" id="eerr"></span></div></form>`);
+  $("eU").oninput=()=>{$("eHint").hidden=$("eU").value.trim().toLowerCase()===u.username};
+  $("eu").addEventListener("submit",async e=>{e.preventDefault();$("eerr").textContent="";
+    const n=$("eN").value.trim(),p=$("eP").value.trim(),un=$("eU").value.trim().toLowerCase(),r=$("eR")?$("eR").value:u.role;
+    if(!n){$("eerr").textContent="กรอกชื่อ-นามสกุล";return}
+    const ue=checkUsername(un,u.id);if(ue){$("eerr").textContent=ue;return}
+    if(n===u.name&&p===(u.position||"")&&un===u.username&&r===u.role){closeModal(true);return}
+    const btn=$("eu").querySelector("button[type=submit]");btn.disabled=true;btn.textContent="กำลังบันทึก…";
+    try{await api("update",{uid:u.id,name:n,position:p,username:un,role:r})}catch(x){$("eerr").textContent=x.message;btn.disabled=false;btn.innerHTML=ic("check")+"บันทึกการแก้ไข";return}
+    closeModal(true);
+    if(un!==u.username){S.pwNote=`แก้ไขบัญชี <b>${esc(n)}</b> แล้ว · ชื่อผู้ใช้ใหม่คือ <code>${esc(un)}</code> แจ้งเจ้าของบัญชีด้วย (รหัสผ่านเดิมใช้ได้)`;render();window.scrollTo(0,0)}
+    else toast("บันทึกการแก้ไขแล้ว")});
+}
+
+// เพิ่มหลายคนพร้อมกัน: กรอกเป็นตาราง หรือคัดลอกจาก Excel / Google Sheets มาวาง
+function addMany(seed){
+  const pt=userPattern(),sup=isSuper();
+  let rows=(seed&&seed.length?seed:Array.from({length:5},()=>({}))).map(r=>({name:"",position:"",username:"",password:"",role:"teacher",...r}));
+  const cols=["name","position","username","password"];
+  const body=openModal("เพิ่มบัญชีหลายคน",`<div class="stack bulk">
+    <div class="banner" style="margin:0">${ic("info")}<div>พิมพ์ทีละแถว หรือ<b>คัดลอกจาก Excel / Google Sheets มาวางที่ช่องชื่อ</b>ได้ทีเดียวหลายคน (เรียงคอลัมน์: ชื่อ-นามสกุล · ตำแหน่ง · ชื่อผู้ใช้ · รหัสผ่าน) ช่องที่เว้นว่าง ระบบตั้งให้อัตโนมัติ</div></div>
+    <div class="grid-f">
+      <label class="f">ชื่อผู้ใช้ขึ้นต้นด้วย<input id="bPre" maxlength="20" autocapitalize="none" spellcheck="false" value="${esc(pt.prefix)}"></label>
+      <label class="f">ตำแหน่ง (ใช้กับแถวที่เว้นว่าง)<input id="bPos" maxlength="80" value="ครู"></label>
+    </div>
+    <div class="bgrid${sup?" sup":""}" id="bGrid"></div>
+    <div class="row2" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="bAdd">${ic("plus")}เพิ่ม 1 แถว</button><button type="button" class="btn sm" id="bAdd5">${ic("plus")}เพิ่ม 5 แถว</button><span class="sp"></span><span class="muted" id="bCnt"></span></div>
+    <div class="actions"><button type="button" class="btn primary" id="bGo">${ic("plus")}สร้างบัญชีทั้งหมด</button><button type="button" class="btn" data-mx>ยกเลิก</button><span class="err" id="berr"></span></div>
+  </div>`,{wide:true,keep:true});
+  const md=$("modal");
+  const plan=()=>{const pre=($("bPre").value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,""))||"teacher";
+    const taken=new Set([...D.users.map(u=>u.username),...rows.map(r=>r.username.trim().toLowerCase()).filter(Boolean)]);
+    const need=rows.filter(r=>r.name.trim()&&!r.username.trim()).length,auto=autoUsernames(pre,pt.prefix===pre?pt.width:3,need,taken);let i=0;
+    return rows.map(r=>r.name.trim()&&!r.username.trim()?auto[i++]:"")};
+  const hint=()=>{const a=plan();body.querySelectorAll("[data-c=username]").forEach(inp=>{const k=+inp.dataset.i;inp.placeholder=a[k]?a[k]+" (อัตโนมัติ)":"อัตโนมัติ"});
+    const n=rows.filter(r=>r.name.trim()).length;$("bCnt").textContent=n?`พร้อมสร้าง ${n} บัญชี`:"";};
+  const draw=()=>{$("bGrid").innerHTML=`<div class="bh"><span>#</span><span>ชื่อ-นามสกุล</span><span>ตำแหน่ง</span><span>ชื่อผู้ใช้</span><span>รหัสผ่าน</span>${sup?"<span>สิทธิ์</span>":""}<span></span></div>`+rows.map((r,i)=>`<div class="br" data-row="${i}"><span class="bn">${i+1}</span>
+      <input data-i="${i}" data-c="name" maxlength="80" value="${esc(r.name)}" placeholder="คำนำหน้า ชื่อ นามสกุล" aria-label="ชื่อ-นามสกุล แถว ${i+1}">
+      <input data-i="${i}" data-c="position" maxlength="80" value="${esc(r.position)}" placeholder="ตามค่าด้านบน" aria-label="ตำแหน่ง แถว ${i+1}">
+      <input data-i="${i}" data-c="username" maxlength="30" autocapitalize="none" autocomplete="off" spellcheck="false" value="${esc(r.username)}" aria-label="ชื่อผู้ใช้ แถว ${i+1}">
+      <input data-i="${i}" data-c="password" maxlength="30" autocomplete="off" value="${esc(r.password)}" placeholder="สุ่มให้" aria-label="รหัสผ่าน แถว ${i+1}">
+      ${sup?`<select data-i="${i}" data-c="role" aria-label="สิทธิ์ แถว ${i+1}"><option value="teacher"${r.role!=="admin"?" selected":""}>ครูผู้สอน</option><option value="admin"${r.role==="admin"?" selected":""}>แอดมินโรงเรียน</option></select>`:""}
+      <button type="button" class="btn sm ghost bdel" data-del="${i}" aria-label="ลบแถว ${i+1}" title="ลบแถว">${ic("trash")}</button>${r.err?`<span class="berr">${esc(r.err)}</span>`:""}</div>`).join("");
+    hint()};
+  draw();
+  body.addEventListener("input",e=>{const t=e.target;if(t.dataset.c){rows[+t.dataset.i][t.dataset.c]=t.value;md.dataset.dirty="1";hint()}else if(t.id==="bPre")hint()});
+  body.addEventListener("change",e=>{const t=e.target;if(t.dataset.c==="role")rows[+t.dataset.i].role=t.value});
+  body.addEventListener("paste",e=>{const t=e.target;if(!t.dataset||!t.dataset.c||t.dataset.c==="role")return;
+    const txt=(e.clipboardData||window.clipboardData).getData("text");if(!/[\t\n]/.test(txt.trim()))return;e.preventDefault();
+    const lines=txt.replace(/\r/g,"").split("\n").filter(l=>l.trim());const r0=+t.dataset.i,c0=cols.indexOf(t.dataset.c);
+    lines.forEach((l,k)=>{const cells=l.split("\t");if(!rows[r0+k])rows[r0+k]={name:"",position:"",username:"",password:"",role:"teacher"};
+      cells.forEach((v,j)=>{const c=cols[c0+j];if(c)rows[r0+k][c]=v.trim()})});
+    if(rows.length>100)rows=rows.slice(0,100);md.dataset.dirty="1";draw();toast(`วาง ${lines.length} แถวแล้ว`)});
+  body.addEventListener("click",e=>{const d=e.target.closest("[data-del]");if(!d)return;rows.splice(+d.dataset.del,1);if(!rows.length)rows.push({name:"",position:"",username:"",password:"",role:"teacher"});draw()});
+  $("bAdd").onclick=()=>{if(rows.length>=100)return toast("เพิ่มได้ครั้งละไม่เกิน 100 คน");rows.push({name:"",position:"",username:"",password:"",role:"teacher"});draw();body.querySelector(`[data-i="${rows.length-1}"][data-c=name]`).focus()};
+  $("bAdd5").onclick=()=>{for(let k=0;k<5&&rows.length<100;k++)rows.push({name:"",position:"",username:"",password:"",role:"teacher"});draw()};
+  $("bGo").onclick=async()=>{$("berr").textContent="";rows.forEach(r=>delete r.err);
+    const auto=plan(),pos=$("bPos").value.trim(),seen=new Set();let bad=0;
+    const list=[];rows.forEach((r,i)=>{const any=cols.some(c=>r[c].trim());if(!any)return;
+      const it={i,name:r.name.trim(),position:r.position.trim()||pos,username:(r.username.trim()||auto[i]||"").toLowerCase(),password:r.password.trim()||tmpPw(),role:sup&&r.role==="admin"?"admin":"teacher"};
+      let er=!it.name?"ยังไม่ได้กรอกชื่อ":checkUsername(it.username)||(seen.has(it.username)?"ชื่อผู้ใช้ซ้ำกับแถวอื่น":"")||(it.password.length<6?"รหัสผ่านอย่างน้อย 6 ตัว":"");
+      seen.add(it.username);if(er){r.err=er;bad++}else list.push(it)});
+    if(bad){draw();$("berr").textContent=`มี ${bad} แถวที่ต้องแก้ (ดูข้อความสีแดงใต้แถว)`;return}
+    if(!list.length){$("berr").textContent="กรอกชื่ออย่างน้อย 1 คน";return}
+    const go=$("bGo");go.disabled=true;body.querySelectorAll("input,select,button").forEach(x=>x.disabled=true);
+    const res=[];for(let k=0;k<list.length;k+=5){const part=list.slice(k,k+5);go.textContent=`กำลังสร้าง ${Math.min(k+5,list.length)}/${list.length}…`;
+      try{const j=await api("createMany",{list:part.map(({i,...x})=>x)});part.forEach((p,q)=>res.push({...p,...(j.results&&j.results[q]||{ok:false,error:"ไม่ทราบผล"})}))}
+      catch(x){part.forEach(p=>res.push({...p,ok:false,error:x.message}))}}
+    md.dataset.dirty="1";showBulkResult(res)};
+}
+function showBulkResult(res){
+  const ok=res.filter(r=>r.ok),no=res.filter(r=>!r.ok);
+  const body=$("mBody");$("mTitle").textContent="ผลการสร้างบัญชี";
+  body.innerHTML=`<div class="stack">
+    <div class="row2" style="gap:8px"><span class="chip good" style="font-size:.95rem;padding:6px 12px">สร้างสำเร็จ ${ok.length} บัญชี</span>${no.length?`<span class="chip bad" style="font-size:.95rem;padding:6px 12px">ไม่สำเร็จ ${no.length} บัญชี</span>`:""}</div>
+    ${ok.length?`<div class="banner" style="margin:0;background:var(--gold-soft)">${ic("info")}<div><b>รหัสผ่านแสดงเฉพาะหน้านี้ครั้งเดียว</b> ดาวน์โหลดหรือคัดลอกเก็บไว้ก่อนปิด แล้วแจ้งครูแต่ละคน</div></div>`:""}
+    <div class="tw"><table class="t"><thead><tr><th>ชื่อ-นามสกุล</th><th>ชื่อผู้ใช้</th><th>รหัสผ่าน</th><th class="c">สถานะ</th></tr></thead><tbody>
+    ${res.map(r=>`<tr><td class="nw">${esc(r.name)}</td><td><code>${esc(r.username)}</code></td><td><b style="letter-spacing:.05em">${r.ok?esc(r.password):"—"}</b></td><td class="c">${r.ok?'<span class="chip good">สำเร็จ</span>':`<span class="chip bad">${esc(r.error||"ไม่สำเร็จ")}</span>`}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="actions">${ok.length?`<button class="btn primary" id="rCsv">${ic("pdf")}ดาวน์โหลดรายชื่อ (CSV)</button><button class="btn" id="rCopy">${ic("copy")}คัดลอก</button>`:""}${no.length?`<button class="btn" id="rFix">${ic("edit")}แก้แถวที่ไม่สำเร็จ</button>`:""}<button class="btn" id="rDone">ปิด</button></div></div>`;
+  const txt=ok.map(r=>`${r.name}\tชื่อผู้ใช้: ${r.username}\tรหัสผ่าน: ${r.password}`).join("\n");
+  $("rCsv")&&($("rCsv").onclick=()=>{saveText("บัญชีผู้ใช้ใหม่_"+TODAY+".csv",[["ชื่อ-นามสกุล","ตำแหน่ง","ชื่อผู้ใช้","รหัสผ่าน","สิทธิ์"],...ok.map(r=>[r.name,r.position,r.username,r.password,ROLE[r.role]])]);delete $("modal").dataset.dirty});
+  $("rCopy")&&($("rCopy").onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast("คัดลอกแล้ว");delete $("modal").dataset.dirty}catch(e){toast("คัดลอกไม่ได้ ใช้ปุ่มดาวน์โหลดแทน")}});
+  $("rFix")&&($("rFix").onclick=()=>addMany(no.map(r=>({name:r.name,position:r.position,username:r.username,password:r.password,role:r.role,err:r.error}))));
+  $("rDone").onclick=()=>closeModal();
+  if(ok.length){S.pq="";S.pr="";S.pwNote=`สร้างบัญชีใหม่แล้ว ${ok.length} บัญชี`;render()}
 }
 
 // ---------- view: settings (admin)
@@ -825,7 +980,7 @@ function makePdf(logs,name,coverAssign){
   $("pvX").onclick=close;$("pvDl").onclick=()=>buildPdf(parts,name);closePvw=close;
   requestAnimationFrame(fitSheets);
 }
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("pvw").hidden&&closePvw)closePvw();$("more").hidden=true}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("modal")){closeModal();return}if(!$("pvw").hidden&&closePvw)closePvw();$("more").hidden=true}});
 async function buildPdf(parts,name){
   if(!DL){toast("หน้านี้ดาวน์โหลดไฟล์ไม่ได้ในมุมมองนี้");return}
   if(!window.html2pdf){toast("โหลดตัวสร้าง PDF ไม่สำเร็จ ลองโหลดหน้าใหม่");return}

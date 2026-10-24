@@ -59,20 +59,40 @@ export default async function handler(req, res) {
     if (!me || !me.active || !["admin", "superadmin"].includes(me.role)) return fail(res, 403, "ไม่มีสิทธิ์ทำรายการนี้");
     const sup = me.role === "superadmin";
 
-    if (action === "create") {
-      const name = String(body.name || "").trim().slice(0, 80);
-      const username = String(body.username || "").trim().toLowerCase();
-      const password = String(body.password || "");
-      const position = String(body.position || "").trim().slice(0, 80);
-      const role = body.role === "admin" && sup ? "admin" : "teacher";
-      if (!name) return fail(res, 400, "กรอกชื่อ-นามสกุล");
-      if (!USERNAME.test(username)) return fail(res, 400, "ชื่อผู้ใช้ใช้ a-z 0-9 . _ - ความยาว 3–30 ตัว");
-      if (password.length < 6) return fail(res, 400, "รหัสผ่านอย่างน้อย 6 ตัว");
+    // ---- สร้างบัญชี (ทีละคน หรือหลายคนพร้อมกันไม่เกิน 10 คนต่อครั้ง)
+    const createOne = async (x) => {
+      const name = String(x.name || "").trim().slice(0, 80);
+      const username = String(x.username || "").trim().toLowerCase();
+      const password = String(x.password || "");
+      const position = String(x.position || "").trim().slice(0, 80);
+      const role = x.role === "admin" && sup ? "admin" : "teacher";
+      if (!name) return { ok: false, status: 400, error: "กรอกชื่อ-นามสกุล" };
+      if (!USERNAME.test(username)) return { ok: false, status: 400, error: "ชื่อผู้ใช้ใช้ a-z 0-9 . _ - ความยาว 3–30 ตัว" };
+      if (password.length < 6) return { ok: false, status: 400, error: "รหัสผ่านอย่างน้อย 6 ตัว" };
       const dup = await users.where("username", "==", username).limit(1).get();
-      if (!dup.empty) return fail(res, 409, "ชื่อผู้ใช้นี้มีแล้ว");
-      const u = await auth.createUser({ email: `${username}@${DOMAIN}`, password, displayName: name });
-      await users.doc(u.uid).set({ name, username, position, role, active: true, createdAt: FieldValue.serverTimestamp(), createdBy: tok.uid });
-      return res.json({ ok: true, uid: u.uid });
+      if (!dup.empty) return { ok: false, status: 409, error: "ชื่อผู้ใช้นี้มีแล้ว" };
+      try {
+        const u = await auth.createUser({ email: `${username}@${DOMAIN}`, password, displayName: name });
+        await users.doc(u.uid).set({ name, username, position, role, active: true, createdAt: FieldValue.serverTimestamp(), createdBy: tok.uid });
+        return { ok: true, uid: u.uid };
+      } catch (e) {
+        const c = e && e.code || "";
+        if (c === "auth/email-already-exists") return { ok: false, status: 409, error: "ชื่อผู้ใช้นี้มีแล้ว" };
+        if (c === "auth/invalid-password") return { ok: false, status: 400, error: "รหัสผ่านอย่างน้อย 6 ตัว" };
+        console.error(e);
+        return { ok: false, status: 500, error: "สร้างไม่สำเร็จ ลองใหม่อีกครั้ง" };
+      }
+    };
+    if (action === "create") {
+      const r = await createOne(body);
+      return r.ok ? res.json({ ok: true, uid: r.uid }) : fail(res, r.status, r.error);
+    }
+    if (action === "createMany") {
+      const list = Array.isArray(body.list) ? body.list.slice(0, 10) : [];
+      if (!list.length) return fail(res, 400, "ไม่มีรายชื่อ");
+      const results = [];
+      for (const x of list) { const r = await createOne(x); results.push({ ok: r.ok, uid: r.uid, error: r.error }); }
+      return res.json({ ok: true, results });
     }
 
     const uid = String(body.uid || "");
@@ -80,6 +100,25 @@ export default async function handler(req, res) {
     const allowed = target && uid !== tok.uid && target.role !== "superadmin" && (target.role === "teacher" || sup);
     if (!allowed) return fail(res, 403, "ไม่มีสิทธิ์จัดการบัญชีนี้");
 
+    if (action === "update") {
+      const name = String(body.name || "").trim().slice(0, 80);
+      const position = String(body.position || "").trim().slice(0, 80);
+      const username = String(body.username || "").trim().toLowerCase();
+      if (!name) return fail(res, 400, "กรอกชื่อ-นามสกุล");
+      if (!USERNAME.test(username)) return fail(res, 400, "ชื่อผู้ใช้ใช้ a-z 0-9 . _ - ความยาว 3–30 ตัว");
+      const patch = { name, position };
+      if (username !== target.username) {
+        const dup = await users.where("username", "==", username).limit(1).get();
+        if (!dup.empty) return fail(res, 409, "ชื่อผู้ใช้นี้มีแล้ว");
+        await auth.updateUser(uid, { email: `${username}@${DOMAIN}`, displayName: name });
+        patch.username = username;
+      } else {
+        await auth.updateUser(uid, { displayName: name });
+      }
+      if (sup && ["admin", "teacher"].includes(body.role)) patch.role = body.role;
+      await users.doc(uid).update(patch);
+      return res.json({ ok: true });
+    }
     if (action === "resetPassword") {
       const password = String(body.password || "");
       if (password.length < 6) return fail(res, 400, "รหัสผ่านอย่างน้อย 6 ตัว");

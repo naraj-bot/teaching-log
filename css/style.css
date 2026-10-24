@@ -430,3 +430,52 @@ details#nOther{border-top:1px dashed var(--line);padding-top:10px}
 .flyout .fh{font-size:.78rem;color:var(--gold-hi);padding:4px 10px 6px;border-bottom:1px solid rgba(243,210,122,.3);margin-bottom:4px;letter-spacing:.03em}
 .flyout::before{content:"";position:absolute;left:-7px;top:var(--ay,22px);width:12px;height:12px;background:var(--hdr-b);border-left:1px solid var(--gold);border-bottom:1px solid var(--gold);transform:rotate(45deg)}
 @media (max-width:899px){.flyout{display:none!important}}
+
+/* ---------- หน้าต่างลอย (modal) ---------- */
+body.noscroll{overflow:hidden}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(20,4,2,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+.mpanel{background:var(--surface);border-radius:16px;border-top:4px solid var(--gold);width:100%;max-width:620px;max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.mpanel.wide{max-width:1040px}
+.mhead{display:flex;align-items:center;gap:10px;padding:14px 14px 10px 20px;border-bottom:1px solid var(--line)}
+.mhead h2{flex:1;font-size:1.12rem;color:var(--accent);margin:0}
+.mhead .mx{min-width:42px;padding:8px}
+.mbody{padding:16px 20px 20px;overflow:auto;overscroll-behavior:contain}
+@media (max-width:640px){
+  .modal{padding:0;align-items:flex-end}
+  .mpanel{max-height:calc(100dvh - 24px);border-radius:18px 18px 0 0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .mbody{padding:14px 16px 18px}
+}
+
+/* ---------- หน้าครูและผู้ดูแล ---------- */
+.ptool{padding:12px 14px}
+.prow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.psearch{flex:1 1 260px}
+.pfilter{flex:0 1 210px}
+.pbtns{display:flex;gap:8px;flex-wrap:wrap}
+.pcount{font-size:.82rem;margin-top:6px}
+.pact{gap:6px;justify-content:center;flex-wrap:nowrap}
+.pact .btn{white-space:nowrap}
+@media (min-width:641px){
+  .ptable{max-height:max(300px,calc(100dvh - 310px));overflow:auto}
+  .ptable thead th{position:sticky;top:0;z-index:2;box-shadow:0 1px 0 var(--line)}
+}
+@media (max-width:640px){.pbtns{width:100%}.pbtns .btn{flex:1}.pact{flex-wrap:wrap;justify-content:flex-start}}
+
+/* ---------- ตารางเพิ่มหลายคน ---------- */
+.bgrid{display:flex;flex-direction:column;gap:6px}
+.bh,.br{display:grid;grid-template-columns:28px minmax(180px,2.2fr) minmax(110px,1.3fr) minmax(110px,1.2fr) minmax(90px,1fr) 42px;gap:6px;align-items:center}
+.bgrid.sup .bh,.bgrid.sup .br{grid-template-columns:28px minmax(170px,2.1fr) minmax(100px,1.2fr) minmax(105px,1.1fr) minmax(85px,.9fr) minmax(130px,1.1fr) 42px}
+.bh{font-size:.8rem;color:var(--muted);font-weight:600;padding:0 0 2px}
+.bn{color:var(--muted);font-size:.85rem;text-align:center;font-variant-numeric:tabular-nums}
+.br select{min-width:0}
+.bdel{padding:6px;min-height:38px;color:var(--bad)}
+.berr{grid-column:2/-1;color:var(--bad);font-size:.82rem;margin-top:-2px}
+@media (max-width:760px){
+  .bh{display:none}
+  .br,.bgrid.sup .br{grid-template-columns:1fr 1fr;background:var(--sunk);border-radius:10px;padding:8px;position:relative}
+  .br .bn{grid-column:1/-1;text-align:left}
+  .br [data-c=name]{grid-column:1/-1}
+  .bdel{position:absolute;top:2px;right:4px}
+  .berr{grid-column:1/-1}
+}
