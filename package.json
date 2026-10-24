@@ -1,0 +1,11 @@
+{
+  "name": "teaching-log",
+  "version": "1.0.0",
+  "private": true,
+  "description": "สมุดบันทึกหลังสอน · พัฒนาระบบโดย ครูซอสสอนสังคม",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "firebase-admin": "12.7.0"
+  }
+}

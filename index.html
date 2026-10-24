@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#7a1212">
+<meta name="description" content="สมุดบันทึกหลังสอน ระบบบันทึกผลหลังแผนการจัดการเรียนรู้ · พัฒนาระบบโดย ครูซอสสอนสังคม">
+<title>สมุดบันทึกหลังสอน</title>
+<link rel="icon" type="image/png" href="img/logo.png">
+<link rel="apple-touch-icon" href="img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Sarabun:ital,wght@0,400;0,700;1,700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div id="boot" class="bootscr"><div>กำลังโหลด…</div></div>
+<div class="gate" id="gate" hidden></div>
+<div class="pvw" id="pvw" hidden></div>
+<div class="flyout" id="navFly" role="menu" aria-label="จัดการระบบ" hidden></div>
+<div class="side" id="side">
+  <div class="logo"><span class="mark" id="markSide"></span><div><b>สมุดบันทึกหลังสอน</b><small id="schoolSide"></small></div></div>
+  <nav class="navlist" id="sideNav" aria-label="เมนูหลัก"></nav>
+  <div class="me"><button class="mebtn" data-go="account" id="meBtn" title="บัญชีของฉัน"><span class="avatar" id="meAv"></span><span class="metx"><b id="meName"></b><small id="meRole"></small></span></button><button class="navbtn out" id="sideOut" aria-label="ออกจากระบบ" title="ออกจากระบบ"></button></div>
+  <div class="credit" id="creditSide"></div>
+</div>
+
+<div class="col">
+  <header class="appbar"><div class="gut">
+    <span class="mark" id="markTop"></span>
+    <div class="t"><h1 id="pageTitle">บันทึก</h1><small id="pageSub"></small></div>
+    <label class="termsel">ภาคเรียน <select id="termSel" aria-label="เลือกภาคเรียน"></select></label>
+  </div></header>
+  <main class="gut" id="main"></main>
+</div>
+
+<nav class="bnav" id="bnav" aria-label="เมนูหลัก"></nav>
+<div class="sheetmenu" id="more" hidden><div class="panel" role="dialog" aria-label="เมนูเพิ่มเติม"><div class="grab"></div><div id="moreList"></div></div></div>
+<div id="pdfStage" aria-hidden="true"></div>
+<div class="pdfwork" id="pdfWork" hidden><div>กำลังสร้าง PDF…</div></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+</body>
+</html>

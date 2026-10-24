@@ -1,0 +1,80 @@
+rules_version = '2';
+
+// กฎความปลอดภัย · สมุดบันทึกหลังสอน
+// สิทธิ์: teacher (ครูผู้สอน) · admin (แอดมินโรงเรียน) · superadmin (แอดมินหลัก)
+// การสร้างบัญชี เปลี่ยนสิทธิ์ ปิดใช้งาน ทำผ่าน /api/admin (เซิร์ฟเวอร์) เท่านั้น
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function me() {
+      return signedIn() && exists(userPath()) ? get(userPath()).data : {'role': 'none', 'active': false};
+    }
+    function staff() { let m = me(); return m.active == true && m.role in ['teacher', 'admin', 'superadmin']; }
+    function admin() { let m = me(); return m.active == true && m.role in ['admin', 'superadmin']; }
+    function sup()   { let m = me(); return m.active == true && m.role == 'superadmin'; }
+    function str(v, n) { return v is string && v.size() <= n; }
+
+    // ชื่อโรงเรียน ภาคเรียน เครดิต: ทุกคนอ่านได้ (แสดงบนหน้าเข้าสู่ระบบ)
+    match /settings/{id} {
+      allow read: if true;
+      allow create: if sup() && id == 'public';
+      allow update: if admin() && id == 'public'
+        && (sup() || request.resource.data.get('credit', '') == resource.data.get('credit', ''));
+    }
+
+    // ผู้ใช้: แก้ได้เฉพาะชื่อ ตำแหน่ง ลายเซ็นของตัวเอง · บัญชีแอดมินหลักซ่อนจากคนอื่น
+    match /users/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || (staff() && (resource.data.role != 'superadmin' || sup())));
+      allow list: if staff() && (sup() || resource.data.role in ['admin', 'teacher']);
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'position', 'sig'])
+        && str(request.resource.data.name, 80)
+        && (!('sig' in request.resource.data) || str(request.resource.data.sig, 300000));
+      allow create, delete: if false;
+    }
+
+    // วิชาที่สอน: ครูจัดการของตัวเอง แอดมินอ่านได้ทั้งหมด
+    match /assigns/{id} {
+      allow read: if staff() && (resource.data.teacherId == request.auth.uid || admin());
+      allow create: if staff() && request.resource.data.teacherId == request.auth.uid
+        && str(request.resource.data.subject, 100) && str(request.resource.data.term, 12)
+        && request.resource.data.classes is list && request.resource.data.classes.size() <= 30;
+      allow update, delete: if staff() && resource.data.teacherId == request.auth.uid
+        && (request.method == 'delete' || request.resource.data.teacherId == request.auth.uid);
+    }
+
+    // รายวิชาของโรงเรียน: ทุกคนในระบบอ่านได้ แก้ได้เฉพาะแอดมิน
+    match /courses/{id} {
+      allow read: if staff();
+      allow write: if admin() && (request.method == 'delete'
+        || (str(request.resource.data.name, 100) && request.resource.data.hours is int));
+    }
+
+    // บันทึกหลังสอน: ครูเห็นเฉพาะของตัวเอง แอดมินเห็นทั้งหมด
+    match /logs/{id} {
+      function valid(d) {
+        return str(d.subject, 100) && str(d.cls, 20) && d.date is string && d.date.size() == 10
+          && str(d.term, 12) && str(d.topic, 200) && str(d.teacher, 80)
+          && d.total is int && d.pass is int && d.total >= 0 && d.pass >= 0 && d.pass <= d.total;
+      }
+      allow read: if staff() && (resource.data.authorId == request.auth.uid || admin());
+      allow create: if staff() && request.resource.data.authorId == request.auth.uid && valid(request.resource.data);
+      allow update: if staff() && resource.data.authorId == request.auth.uid
+        && request.resource.data.authorId == resource.data.authorId && valid(request.resource.data);
+      allow delete: if staff() && resource.data.authorId == request.auth.uid;
+    }
+
+    // ความคิดเห็นและลายเซ็นผู้บริหาร: เขียนได้เฉพาะแอดมิน
+    // ครูลบได้เฉพาะตอนลบบันทึกของตัวเองพร้อมกัน
+    match /reviews/{id} {
+      allow read: if staff();
+      allow create, update: if admin()
+        && exists(/databases/$(database)/documents/logs/$(id))
+        && str(request.resource.data.comment, 2000) && request.resource.data.by == request.auth.uid;
+      allow delete: if admin()
+        || (staff() && !existsAfter(/databases/$(database)/documents/logs/$(id)));
+    }
+  }
+}
