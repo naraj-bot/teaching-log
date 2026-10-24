@@ -128,6 +128,8 @@ function buildCourseSeed(){
   return out;
 }
 function courseSave(c){const{id,...d}=c;(id?updateDoc(doc(db,"courses",id),d):addDoc(collection(db,"courses"),d)).then(()=>toast("บันทึกรายวิชาแล้ว")).catch(e=>toast(fsMsg(e)))}
+async function courseAddMany(list){try{for(let i=0;i<list.length;i+=400){const b=writeBatch(db);list.slice(i,i+400).forEach(c=>b.set(doc(collection(db,"courses")),c));await b.commit()}toast("เพิ่มรายวิชาแล้ว "+list.length+" รายการ");return true}catch(e){toast(fsMsg(e));return false}}
+const courseKey=c=>[c.grade,c.sem,(c.code||"").trim(),(c.name||"").trim()].join("|");
 function courseDel(id){deleteDoc(doc(db,"courses",id)).then(()=>toast("ลบรายวิชาแล้ว")).catch(e=>toast(fsMsg(e)))}
 async function courseSeed(){const all=buildCourseSeed();try{for(let i=0;i<all.length;i+=400){const b=writeBatch(db);all.slice(i,i+400).forEach(c=>b.set(doc(collection(db,"courses")),c));await b.commit()}toast("นำเข้ารายวิชาแล้ว "+all.length+" รายการ")}catch(e){toast(fsMsg(e))}}
 function asgAdd(list){const b=writeBatch(db);list.forEach(a=>b.set(doc(collection(db,"assigns")),a));b.commit().then(()=>toast("เพิ่มวิชาแล้ว "+list.length+" วิชา")).catch(e=>toast(fsMsg(e)))}
@@ -556,16 +558,19 @@ function vCourses(m){
     return `<div class="card" style="padding:0"><div class="sec-h" style="padding:14px 16px 8px"><h2>ภาคเรียนที่ ${sem}</h2><span class="sp"></span><span class="muted">${rows.filter(c=>c.type!=="กิจกรรม").length} รายวิชา · ${rows.filter(c=>c.type==="กิจกรรม").length} กิจกรรม</span></div>
       <div class="tw"><table class="t ctab"><thead><tr><th style="width:96px">รหัสวิชา</th><th>รายวิชา</th><th class="c" style="width:140px">ชั่วโมง (น้ำหนัก)</th><th class="c" style="width:160px">จัดการ</th></tr></thead>
       <tbody>${rows.length?body:`<tr><td colspan="4" class="c muted">ยังไม่มีรายวิชา</td></tr>`}</tbody></table></div></div>`};
-  m.innerHTML=`${!D.courses.length?`<div class="banner">${ic("info")}<div style="flex:1">ยังไม่มีรายวิชาในระบบ นำเข้ารายวิชาตามโครงสร้างหลักสูตรของโรงเรียน (ป.1–ป.6 และ ม.1–ม.3) ได้ในคลิกเดียว แล้วแก้ไขต่อได้</div><button class="btn gold sm" id="cSeed">นำเข้า ${buildCourseSeed().length} รายการ</button></div>`:""}
-  <div class="card gold"><div class="grid-f"><label class="f">ชั้น<select id="cG">${GRADES.map(x=>`<option${x===g?" selected":""}>${x}</option>`).join("")}</select></label>
-    <div class="f"><span>ระดับ</span><div style="min-height:42px;display:flex;align-items:center"><span class="chip red">${esc(lv)}${lv==="มัธยมศึกษา"?" · แยกภาคเรียน 1 และ 2":lv==="ประถมศึกษา"?" · รายปี (ภาคเรียนที่ 1,2)":""}</span></div></div>
-    ${lv==="อนุบาล"?"":`<div class="f"><span>&nbsp;</span><button class="btn primary" id="cAdd">${ic("plus")}เพิ่มรายวิชา ${esc(g)}</button></div>`}</div></div>
+  const cnt=x=>D.courses.filter(c=>c.grade===x).length;
+  m.innerHTML=`${!D.courses.length?`<div class="banner">${ic("info")}<div style="flex:1">ยังไม่มีรายวิชาในระบบ เลือกรายวิชาจากโครงสร้างหลักสูตรของโรงเรียน (ป.1–ป.6 และ ม.1–ม.3) ติ๊กเลือกเฉพาะที่ต้องการ หรือนำเข้าทั้งหมดในคลิกเดียว แล้วแก้ไขต่อได้</div><div class="row2" style="gap:8px"><button class="btn sm" id="cPick0">ติ๊กเลือกเอง</button><button class="btn gold sm" id="cSeed">นำเข้าทั้งหมด ${buildCourseSeed().length} รายการ</button></div></div>`:""}
+  <div class="card gold ctool">
+    <div class="gtabs" role="tablist" aria-label="เลือกชั้น">${GRADES.map(x=>`<button type="button" role="tab" class="gtab${x===g?" on":""}" aria-selected="${x===g}" data-cg="${x}">${x}${levelOfGrade(x)==="อนุบาล"?"":`<small>${cnt(x)}</small>`}</button>`).join("")}</div>
+    <div class="crow"><span class="chip red cl">${esc(lv)}${lv==="มัธยมศึกษา"?" · แยกภาคเรียน 1 และ 2":lv==="ประถมศึกษา"?" · รายปี (ภาคเรียนที่ 1,2)":""}</span><span class="sp"></span>
+    ${lv==="อนุบาล"?"":`<button class="btn" id="cPick">${ic("check")}เลือกจากหลักสูตร</button><button class="btn primary" id="cAdd">${ic("plus")}เพิ่มรายวิชา ${esc(g)}</button>`}</div></div>
   ${lv==="อนุบาล"?`<div class="card muted">ระดับปฐมวัยใช้หน่วยการจัดประสบการณ์ ไม่มีรายวิชา ครูกำหนดได้เองที่เมนู "วิชาที่สอน"</div>`:sems.map(table).join("")}
 `;
-  $("cG").onchange=e=>{S.cg=e.target.value;S.ce=null;render()};
-  $("cSeed")&&($("cSeed").onclick=()=>{$("cSeed").disabled=true;courseSeed()});
+  m.querySelectorAll("[data-cg]").forEach(b=>b.onclick=()=>{S.cg=b.dataset.cg;render()});
+  $("cPick")&&($("cPick").onclick=()=>coursePick(g));$("cPick0")&&($("cPick0").onclick=()=>coursePick(g));
+  $("cSeed")&&($("cSeed").onclick=()=>{const b=$("cSeed");if(!b.dataset.arm){b.dataset.arm="1";b.textContent="กดอีกครั้งเพื่อนำเข้าทั้งหมด";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="นำเข้าทั้งหมด "+buildCourseSeed().length+" รายการ"}},3000);return}b.disabled=true;courseSeed()});
   m.querySelectorAll("[data-ce]").forEach(b=>b.onclick=()=>courseForm(g,lv,sems,D.courses.find(c=>c.id===b.dataset.ce)));
-  $("cAdd")&&($("cAdd").onclick=()=>courseForm(g,lv,sems,null));
+  $("cAdd")&&($("cAdd").onclick=()=>courseMany(g,lv,sems));
   m.querySelectorAll("[data-cd]").forEach(b=>b.onclick=()=>{if(!b.dataset.arm){b.dataset.arm="1";b.textContent="กดอีกครั้งเพื่อลบ";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="ลบ"}},3000);return}courseDel(b.dataset.cd)});
 }
 
@@ -582,6 +587,76 @@ function courseForm(g,lv,sems,ed){
     if(!name){$("cerr").textContent="กรอกชื่อรายวิชา";return}if(!(h>0&&h<=400)){$("cerr").textContent="กรอกชั่วโมง 1–400";return}
     const c={grade:g,sem:$("cS").value,code,name,hours:h,type:t,group:t==="กิจกรรม"?"กิจกรรมพัฒนาผู้เรียน":(GROUP_OF[code[0]]||""),level:lv,order:ed&&ed.order!=null?ed.order:9000+D.courses.length};
     if(ed)c.id=ed.id;closeModal(true);courseSave(c)});
+}
+
+// เลือกรายวิชาจากโครงสร้างหลักสูตร (ติ๊กเลือกได้หลายวิชา หลายชั้น)
+function coursePick(g0){
+  const seed=buildCourseSeed(),have=new Set(D.courses.map(courseKey)),sel=new Set();let g=levelOfGrade(g0)==="อนุบาล"?"ป.1":g0;
+  const grades=[...new Set(seed.map(c=>c.grade))];
+  const body=openModal("เลือกรายวิชาจากโครงสร้างหลักสูตร",`<div class="stack">
+    <div class="gtabs" id="kTabs"></div>
+    <div class="row2" style="gap:8px"><label class="check" style="margin:0"><input type="checkbox" id="kAll"><span id="kAllT">เลือกทั้งชั้น</span></label><span class="sp"></span><button type="button" class="btn sm ghost" id="kEvery">เลือกทุกชั้นที่ยังไม่มี</button><button type="button" class="btn sm ghost" id="kNone">ล้างที่เลือก</button></div>
+    <div id="kList" class="klist"></div>
+    <div class="actions kfoot"><button type="button" class="btn primary" id="kGo" disabled>${ic("plus")}เพิ่มรายวิชาที่เลือก</button><button type="button" class="btn" data-mx>ยกเลิก</button><span class="muted" id="kCnt"></span></div></div>`,{wide:true,keep:true});
+  const md=$("modal");
+  const idx=x=>seed.map((c,i)=>i).filter(i=>seed[i].grade===x&&!have.has(courseKey(seed[i])));
+  const draw=()=>{
+    $("kTabs").innerHTML=grades.map(x=>{const n=[...sel].filter(i=>seed[i].grade===x).length;return `<button type="button" class="gtab${x===g?" on":""}" data-kg="${x}">${x}${n?`<small class="hot">${n}</small>`:""}</button>`}).join("");
+    const rows=seed.map((c,i)=>({c,i})).filter(o=>o.c.grade===g),sems=[...new Set(rows.map(o=>o.c.sem))];
+    $("kList").innerHTML=sems.map(sm=>`<div class="ksem"><h3>${sems.length>1?"ภาคเรียนที่ "+sm:"ภาคเรียนที่ 1,2 (รายปี)"}</h3>${["พื้นฐาน","เพิ่มเติม","กิจกรรม"].map(t=>{const rs=rows.filter(o=>o.c.sem===sm&&o.c.type===t);if(!rs.length)return"";
+      return `<div class="kgrp">${t==="กิจกรรม"?"กิจกรรมพัฒนาผู้เรียน":"รายวิชา"+t}</div>`+rs.map(({c,i})=>{const had=have.has(courseKey(c));return `<label class="krow${had?" had":""}"><input type="checkbox" data-k="${i}"${had||sel.has(i)?" checked":""}${had?" disabled":""}><span class="kc">${esc(c.code||"—")}</span><span class="kn">${esc(c.name)}</span><span class="kh">${t==="กิจกรรม"?esc(c.hours)+" ชม.":esc(c.hours)+" ชม. ("+credit(c.hours)+")"}</span>${had?'<span class="chip">มีแล้ว</span>':""}</label>`}).join("")}).join("")}</div>`).join("");
+    const av=idx(g),on=av.filter(i=>sel.has(i)).length;$("kAll").checked=av.length>0&&on===av.length;$("kAll").indeterminate=on>0&&on<av.length;$("kAll").disabled=!av.length;
+    $("kAllT").textContent=av.length?`เลือกทั้งชั้น ${g} (${av.length} รายการ)`:`ชั้น ${g} มีครบทุกรายการแล้ว`;
+    $("kCnt").textContent=sel.size?`เลือกไว้ ${sel.size} รายการ`:"ยังไม่ได้เลือก";$("kGo").disabled=!sel.size;$("kGo").innerHTML=ic("plus")+(sel.size?`เพิ่ม ${sel.size} รายวิชาที่เลือก`:"เพิ่มรายวิชาที่เลือก");
+    if(sel.size)md.dataset.dirty="1";else delete md.dataset.dirty};
+  draw();
+  body.addEventListener("click",e=>{const t=e.target.closest("[data-kg]");if(t){g=t.dataset.kg;draw();$("kList").scrollTop=0}});
+  body.addEventListener("change",e=>{const k=e.target.dataset.k;if(k!=null){e.target.checked?sel.add(+k):sel.delete(+k);draw()}});
+  $("kAll").onchange=()=>{const av=idx(g);$("kAll").checked?av.forEach(i=>sel.add(i)):av.forEach(i=>sel.delete(i));draw()};
+  $("kEvery").onclick=()=>{seed.forEach((c,i)=>{if(!have.has(courseKey(c)))sel.add(i)});draw()};
+  $("kNone").onclick=()=>{sel.clear();draw()};
+  $("kGo").onclick=async()=>{const list=[...sel].sort((a,b)=>a-b).map(i=>seed[i]);$("kGo").disabled=true;$("kGo").textContent="กำลังเพิ่ม…";
+    if(await courseAddMany(list)){closeModal(true);S.cg=list[0].grade===g0?g0:list[0].grade;render()}else draw()};
+}
+
+// เพิ่มรายวิชาเองทีละหลายวิชา (กรอกเป็นตาราง หรือคัดลอกจาก Excel มาวาง)
+function courseMany(g,lv,sems){
+  const blank=()=>({sem:sems[0],type:"พื้นฐาน",code:"",name:"",hours:""});let rows=[blank(),blank(),blank()];
+  const cols=["code","name","hours"];
+  const body=openModal("เพิ่มรายวิชา · ชั้น "+g,`<div class="stack">
+    <div class="banner" style="margin:0">${ic("info")}<div>กรอกได้หลายแถว หรือ<b>คัดลอกจาก Excel มาวางที่ช่องรหัสวิชา</b> (เรียงคอลัมน์: รหัสวิชา · ชื่อรายวิชา · ชั่วโมง) ระบบดูประเภทพื้นฐาน/เพิ่มเติมจากรหัสวิชาให้เอง</div></div>
+    <div class="bgrid cgrid${sems.length>1?" two":""}" id="qGrid"></div>
+    <div class="row2" style="gap:8px"><button type="button" class="btn sm" id="qAdd">${ic("plus")}เพิ่ม 1 แถว</button><button type="button" class="btn sm" id="qAdd5">${ic("plus")}เพิ่ม 5 แถว</button><span class="sp"></span><span class="muted" id="qCnt"></span></div>
+    <div class="actions"><button type="button" class="btn primary" id="qGo">${ic("plus")}เพิ่มรายวิชาทั้งหมด</button><button type="button" class="btn" data-mx>ยกเลิก</button><span class="err" id="qerr"></span></div></div>`,{wide:true,keep:true});
+  const md=$("modal");
+  const autoType=r=>{const m=/^[ก-ฮ]\d(\d)(\d)/.exec(r.code.trim());if(m&&r.type!=="กิจกรรม")r.type=m[2]==="2"?"เพิ่มเติม":"พื้นฐาน"};
+  const cnt=()=>{const n=rows.filter(r=>r.name.trim()).length;$("qCnt").textContent=n?`พร้อมเพิ่ม ${n} รายวิชา`:""};
+  const draw=()=>{$("qGrid").innerHTML=`<div class="bh"><span>#</span>${sems.length>1?"<span>ภาคเรียน</span>":""}<span>ประเภท</span><span>รหัสวิชา</span><span>ชื่อรายวิชา</span><span>ชั่วโมง</span><span></span></div>`+rows.map((r,i)=>`<div class="br"><span class="bn">${i+1}</span>
+    ${sems.length>1?`<select data-i="${i}" data-c="sem" aria-label="ภาคเรียน แถว ${i+1}">${sems.map(x=>`<option value="${x}"${r.sem===x?" selected":""}>ภาค ${x}</option>`).join("")}</select>`:""}
+    <select data-i="${i}" data-c="type" aria-label="ประเภท แถว ${i+1}">${[["พื้นฐาน","พื้นฐาน"],["เพิ่มเติม","เพิ่มเติม"],["กิจกรรม","กิจกรรม"]].map(([v,t])=>`<option value="${v}"${r.type===v?" selected":""}>${t}</option>`).join("")}</select>
+    <input data-i="${i}" data-c="code" maxlength="12" value="${esc(r.code)}" placeholder="เช่น ส21103" aria-label="รหัสวิชา แถว ${i+1}">
+    <input data-i="${i}" data-c="name" maxlength="100" value="${esc(r.name)}" placeholder="ชื่อรายวิชา" aria-label="ชื่อรายวิชา แถว ${i+1}">
+    <input data-i="${i}" data-c="hours" type="number" min="1" max="400" inputmode="numeric" value="${esc(r.hours)}" placeholder="ชม." aria-label="ชั่วโมง แถว ${i+1}">
+    <button type="button" class="btn sm ghost bdel" data-del="${i}" aria-label="ลบแถว ${i+1}" title="ลบแถว">${ic("trash")}</button>${r.err?`<span class="berr">${esc(r.err)}</span>`:""}</div>`).join("");cnt()};
+  draw();
+  body.addEventListener("input",e=>{const t=e.target,c=t.dataset.c;if(!c||c==="sem"||c==="type")return;const r=rows[+t.dataset.i];r[c]=t.value;md.dataset.dirty="1";
+    if(c==="code"){const before=r.type;autoType(r);if(r.type!==before)body.querySelector(`[data-i="${t.dataset.i}"][data-c=type]`).value=r.type}cnt()});
+  body.addEventListener("change",e=>{const t=e.target,c=t.dataset.c;if(c==="sem"||c==="type")rows[+t.dataset.i][c]=t.value});
+  body.addEventListener("paste",e=>{const t=e.target;if(!t.dataset||!cols.includes(t.dataset.c))return;const txt=(e.clipboardData||window.clipboardData).getData("text");if(!/[\t\n]/.test(txt.trim()))return;e.preventDefault();
+    const lines=txt.replace(/\r/g,"").split("\n").filter(l=>l.trim()),r0=+t.dataset.i,c0=cols.indexOf(t.dataset.c);
+    lines.forEach((l,k)=>{if(!rows[r0+k])rows.push(blank());const r=rows[r0+k];l.split("\t").forEach((v,j)=>{const c=cols[c0+j];if(c)r[c]=c==="hours"?v.replace(/[^\d]/g,""):v.trim()});autoType(r)});
+    rows=rows.slice(0,100);md.dataset.dirty="1";draw();toast(`วาง ${lines.length} แถวแล้ว`)});
+  body.addEventListener("click",e=>{const d=e.target.closest("[data-del]");if(!d)return;rows.splice(+d.dataset.del,1);if(!rows.length)rows.push(blank());draw()});
+  $("qAdd").onclick=()=>{if(rows.length<100){rows.push(blank());draw();body.querySelector(`[data-i="${rows.length-1}"][data-c=code]`).focus()}};
+  $("qAdd5").onclick=()=>{for(let k=0;k<5&&rows.length<100;k++)rows.push(blank());draw()};
+  $("qGo").onclick=async()=>{$("qerr").textContent="";rows.forEach(r=>delete r.err);const have=new Set(D.courses.map(courseKey)),seen=new Set(),list=[];let bad=0,ord=9000+D.courses.length;
+    rows.forEach(r=>{if(!r.code.trim()&&!r.name.trim()&&!String(r.hours).trim())return;const h=parseInt(r.hours,10),code=r.code.trim(),name=r.name.trim();
+      const c={grade:g,sem:r.sem,code,name,hours:h,type:r.type,group:r.type==="กิจกรรม"?"กิจกรรมพัฒนาผู้เรียน":(GROUP_OF[code[0]]||""),level:lv,order:ord++};
+      const k=courseKey(c);r.err=!name?"ยังไม่ได้กรอกชื่อรายวิชา":!(h>0&&h<=400)?"กรอกชั่วโมง 1–400":have.has(k)?"มีรายวิชานี้แล้ว":seen.has(k)?"ซ้ำกับแถวอื่น":"";seen.add(k);
+      if(r.err)bad++;else{delete r.err;list.push(c)}});
+    if(bad){draw();$("qerr").textContent=`มี ${bad} แถวที่ต้องแก้ (ดูข้อความสีแดงใต้แถว)`;return}
+    if(!list.length){$("qerr").textContent="กรอกรายวิชาอย่างน้อย 1 รายการ";return}
+    $("qGo").disabled=true;$("qGo").textContent="กำลังเพิ่ม…";if(await courseAddMany(list))closeModal(true);else{$("qGo").disabled=false;$("qGo").innerHTML=ic("plus")+"เพิ่มรายวิชาทั้งหมด"}};
 }
 
 // ---------- modal (หน้าต่างลอย ใช้กรอกฟอร์มโดยไม่ดันหน้าเลื่อน)

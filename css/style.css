@@ -479,3 +479,30 @@ body.noscroll{overflow:hidden}
   .bdel{position:absolute;top:2px;right:4px}
   .berr{grid-column:1/-1}
 }
+
+/* ---------- หน้ารายวิชา: แท็บชั้น + เลือกหลายวิชา ---------- */
+.ctool{display:flex;flex-direction:column;gap:12px}
+.gtabs{display:flex;gap:6px;flex-wrap:wrap}
+.gtab{appearance:none;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:6px 12px;min-height:40px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.gtab small{font-size:.72rem;background:var(--sunk);color:var(--muted);border-radius:99px;padding:1px 7px;font-weight:600}
+.gtab small.hot{background:var(--gold);color:var(--on-gold)}
+.gtab.on{background:linear-gradient(180deg,var(--hdr-b),var(--hdr-a));color:#fff;border-color:var(--gold)}
+.gtab.on small{background:rgba(255,255,255,.18);color:var(--gold-hi)}
+.crow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.crow .cl{white-space:normal;line-height:1.4}
+@media (max-width:640px){.crow .btn{flex:1 1 100%}}
+.klist{display:flex;flex-direction:column;gap:14px}
+.ksem h3{font-size:.98rem;color:var(--accent);margin:0 0 6px}
+.kgrp{font-size:.8rem;font-weight:700;color:var(--muted);background:var(--sunk);border-radius:8px;padding:5px 10px;margin:8px 0 2px}
+.krow{display:grid;grid-template-columns:24px 78px 1fr auto auto;gap:10px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px}
+.krow:hover{background:var(--sunk)}
+.krow input{width:20px;height:20px;min-height:0;margin:0;accent-color:var(--accent)}
+.krow.had{opacity:.6;cursor:default}
+.kc{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.88rem;white-space:nowrap}
+.kh{color:var(--muted);font-size:.84rem;white-space:nowrap}
+.kfoot{position:sticky;bottom:-20px;background:var(--surface);padding:12px 0 4px;border-top:1px solid var(--line);margin-top:0}
+@media (max-width:640px){.krow{grid-template-columns:22px auto 1fr;gap:2px 8px}.krow input{grid-row:1/3}.krow .kc{grid-column:2}.krow .kn{grid-column:3}.krow .kh{grid-column:2/-1}.krow .chip{grid-column:2/-1;justify-self:start}
+  .kfoot{flex-wrap:wrap}.kfoot #kCnt{order:-1;flex-basis:100%}.kfoot .btn{flex:1;white-space:nowrap}}
+.cgrid .bh,.cgrid .br{grid-template-columns:28px minmax(110px,.9fr) minmax(110px,1fr) minmax(200px,2.4fr) minmax(80px,.7fr) 42px}
+.cgrid.two .bh,.cgrid.two .br{grid-template-columns:28px minmax(90px,.8fr) minmax(110px,.9fr) minmax(110px,1fr) minmax(190px,2.3fr) minmax(76px,.7fr) 42px}
+@media (max-width:760px){.cgrid .br,.cgrid.two .br{grid-template-columns:1fr 1fr}.cgrid .br [data-c=name]{grid-column:1/-1}}
